@@ -1,0 +1,184 @@
+// Common Kubernetes types
+
+export interface ObjectMeta {
+  name: string;
+  namespace?: string;
+  labels?: Record<string, string>;
+  annotations?: Record<string, string>;
+  creationTimestamp?: string;
+  uid?: string;
+  resourceVersion?: string;
+  ownerReferences?: OwnerReference[];
+}
+
+export interface OwnerReference {
+  apiVersion: string;
+  kind: string;
+  name: string;
+  uid: string;
+}
+
+export interface Condition {
+  type: string;
+  status: "True" | "False" | "Unknown";
+  reason?: string;
+  message?: string;
+  lastTransitionTime?: string;
+}
+
+export interface CommonStatus {
+  observedGeneration?: number;
+  conditions?: Condition[];
+}
+
+// dashboard.cozystack.io/v1alpha1
+
+export interface MarketplacePanel {
+  apiVersion: string;
+  kind: "MarketplacePanel";
+  metadata: ObjectMeta;
+  spec: MarketplacePanelSpec;
+  status?: CommonStatus;
+}
+
+export interface MarketplacePanelSpec {
+  name: string;
+  description: string;
+  type: string;
+  apiGroup: string;
+  apiVersion: string;
+  plural: string;
+  disabled: boolean;
+  hidden: boolean;
+  tags: string[];
+  icon: string;
+}
+
+export interface Factory {
+  apiVersion: string;
+  kind: "Factory";
+  metadata: ObjectMeta;
+  spec: FactorySpec;
+  status?: CommonStatus;
+}
+
+export interface FactorySpec {
+  key: string;
+  id: string;
+  sidebarTags?: string[];
+  withScrollableMainContentCard?: boolean;
+  urlsToFetch?: FactoryUrlToFetch[];
+  data: FactoryDataItem[];
+}
+
+export interface FactoryUrlToFetch {
+  url: string;
+  method?: string;
+}
+
+export interface FactoryDataItem {
+  type: string;
+  data: Record<string, unknown>;
+}
+
+export interface CustomFormsOverride {
+  apiVersion: string;
+  kind: "CustomFormsOverride";
+  metadata: ObjectMeta;
+  spec: CustomFormsOverrideSpec;
+  status?: CommonStatus;
+}
+
+export interface CustomFormsOverrideSpec {
+  customizationId: string;
+  hidden?: string[][];
+  sort?: string[][];
+  schema?: Record<string, unknown>;
+  strategy?: "merge" | "replace";
+}
+
+export interface CustomFormsPrefill {
+  apiVersion: string;
+  kind: "CustomFormsPrefill";
+  metadata: ObjectMeta;
+  spec: CustomFormsPrefillSpec;
+  status?: CommonStatus;
+}
+
+export interface CustomFormsPrefillSpec {
+  customizationId: string;
+  values?: PrefillValue[];
+}
+
+export interface PrefillValue {
+  path: string[];
+  value: unknown;
+}
+
+export interface CFOMapping {
+  apiVersion: string;
+  kind: "CFOMapping";
+  metadata: ObjectMeta;
+  spec: CFOMappingSpec;
+  status?: CommonStatus;
+}
+
+export interface CFOMappingSpec {
+  mappings?: Record<string, string>;
+}
+
+export interface CustomColumnsOverride {
+  apiVersion: string;
+  kind: "CustomColumnsOverride";
+  metadata: ObjectMeta;
+  spec: CustomColumnsOverrideSpec;
+  status?: CommonStatus;
+}
+
+export interface CustomColumnsOverrideSpec {
+  customizationId: string;
+  columns?: ColumnDefinition[];
+}
+
+export interface ColumnDefinition {
+  title: string;
+  path: string[];
+  type?: string;
+  width?: number;
+}
+
+// cozystack.io/v1alpha1
+
+export interface ApplicationDefinition {
+  apiVersion: string;
+  kind: "ApplicationDefinition";
+  metadata: ObjectMeta;
+  spec: {
+    application: {
+      kind: string;
+      plural: string;
+      openAPISchema?: string;
+    };
+    dashboard?: {
+      category?: string;
+      singular?: string;
+      plural?: string;
+      description?: string;
+      icon?: string;
+      tags?: string[];
+      module?: boolean;
+      name?: string;
+      keysOrder?: string[][];
+    };
+  };
+}
+
+// Generic app instance (apps.cozystack.io/v1alpha1)
+
+export interface AppInstance {
+  apiVersion: string;
+  kind: string;
+  metadata: ObjectMeta;
+  spec: Record<string, unknown>;
+  status?: CommonStatus;
+}
