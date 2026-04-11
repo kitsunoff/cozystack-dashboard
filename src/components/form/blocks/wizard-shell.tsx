@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,7 @@ function WizardShellInner({
   children,
 }: Omit<WizardShellProps, "schema" | "existingValues">) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { values } = useFormContext();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +107,8 @@ function WizardShellInner({
           spec: values,
         });
       }
+      await queryClient.invalidateQueries({ queryKey: ["instances", plural] });
+      await queryClient.invalidateQueries({ queryKey: ["instance", plural] });
       router.push(backHref);
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to ${isEdit ? "update" : "create"} resource`);
