@@ -1,14 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { ComponentType } from "react";
-import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn, formatAge } from "@/lib/utils";
 import type { AppInstance } from "@/lib/k8s/types";
-import type { TabDef, ActionDef } from "@/components/registry";
+import type { TabDef } from "@/components/registry";
 import { getStatusRenderer } from "@/components/registry";
 
 interface DetailViewProps {
@@ -16,74 +12,35 @@ interface DetailViewProps {
   plural: string;
   namespace: string;
   tabs: TabDef[];
-  actions?: ActionDef[];
 }
 
-export function DetailView({ instance, plural, namespace, tabs, actions }: DetailViewProps) {
+export function DetailView({ instance, plural, namespace, tabs }: DetailViewProps) {
   const [activeTab, setActiveTab] = useState(tabs[0]?.key ?? "");
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const router = useRouter();
-  const queryClient = useQueryClient();
 
   const customStatus = getStatusRenderer(plural);
   const ActiveComponent = tabs.find((t) => t.key === activeTab)?.component;
 
-  const handleAction = async (action: ActionDef) => {
-    if (typeof action.action === "string") {
-      router.push(action.action);
-    } else {
-      setActionLoading(action.key);
-      try {
-        await action.action({ plural, namespace, instance });
-        await queryClient.invalidateQueries({ queryKey: ["instance", plural] });
-        await queryClient.invalidateQueries({ queryKey: ["instances", plural] });
-      } finally {
-        setActionLoading(null);
-      }
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Instance header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold">{instance.metadata.name}</h2>
-            {customStatus ? customStatus(instance) : <DefaultStatus instance={instance} />}
-          </div>
-          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-            <span>{instance.metadata.namespace}</span>
-            <span>·</span>
-            <span>Created {formatAge(instance.metadata.creationTimestamp)} ago</span>
-            {instance.metadata.resourceVersion && (
-              <>
-                <span>·</span>
-                <Badge variant="outline" className="text-[10px] font-mono h-4">
-                  rv {instance.metadata.resourceVersion}
-                </Badge>
-              </>
-            )}
-          </div>
+      <div>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold">{instance.metadata.name}</h2>
+          {customStatus ? customStatus(instance) : <DefaultStatus instance={instance} />}
         </div>
-
-        {/* Detail actions */}
-        {actions && actions.length > 0 && (
-          <div className="flex gap-2">
-            {actions.map((action) => (
-              <Button
-                key={action.key}
-                variant={action.variant === "destructive" ? "destructive" : "outline"}
-                size="sm"
-                onClick={() => handleAction(action)}
-                disabled={actionLoading !== null}
-              >
-                {action.icon && <action.icon className={cn("h-4 w-4", actionLoading === action.key && "animate-spin")} />}
-                {actionLoading === action.key ? "..." : action.label}
-              </Button>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+          <span>{instance.metadata.namespace}</span>
+          <span>·</span>
+          <span>Created {formatAge(instance.metadata.creationTimestamp)} ago</span>
+          {instance.metadata.resourceVersion && (
+            <>
+              <span>·</span>
+              <Badge variant="outline" className="text-[10px] font-mono h-4">
+                rv {instance.metadata.resourceVersion}
+              </Badge>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
