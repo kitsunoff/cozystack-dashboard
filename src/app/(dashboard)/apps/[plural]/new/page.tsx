@@ -65,9 +65,14 @@ function CreateInstanceContent({ plural }: { plural: string }) {
     );
   }
 
-  const schema = appDef?.spec.application.openAPISchema
-    ? JSON.parse(appDef.spec.application.openAPISchema)
-    : null;
+  let schema: Record<string, unknown> | null = null;
+  if (appDef?.spec.application.openAPISchema) {
+    try {
+      schema = JSON.parse(appDef.spec.application.openAPISchema);
+    } catch {
+      console.error("Failed to parse openAPISchema for", plural);
+    }
+  }
 
   // Check for custom form first
   const CustomForm = getCustomForm(plural);

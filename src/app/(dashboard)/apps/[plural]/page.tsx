@@ -1,14 +1,13 @@
 "use client";
 
 import { use, Suspense, useMemo } from "react";
-import { useMarketplacePanels, useInstances } from "@/lib/k8s/hooks";
+import { useMarketplacePanels, useInstances, useEvents } from "@/lib/k8s/hooks";
 import { useNamespace } from "@/hooks/use-namespace";
 import { Header } from "@/components/layout/header";
 import { InstanceTable } from "@/components/instances/instance-table";
 import { InstanceMetrics } from "@/components/instances/instance-metrics";
 import { QuickActions } from "@/components/instances/quick-actions";
 import { ActivityFeed } from "@/components/instances/activity-feed";
-import { generateMockInstances, generateMockActivity } from "@/components/instances/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function InstancesContent({ plural }: { plural: string }) {
@@ -19,19 +18,22 @@ function InstancesContent({ plural }: { plural: string }) {
     namespace
   );
 
+  const { data: events } = useEvents(namespace);
+
   const panel = panels?.find((mp) => mp.spec.plural === plural);
   const appName = panel?.spec.name ?? plural;
-
-  // Use mock data when no real instances exist (dev mode)
-  const instances = useMemo(() => {
-    const real = instanceList?.items ?? [];
-    if (real.length > 0) return real;
-    return generateMockInstances(plural, panel?.spec.name ?? "Instance", namespace);
-  }, [instanceList, plural, panel, namespace]);
-
-  const activity = useMemo(() => generateMockActivity(plural), [plural]);
-
+  const instances = instanceList?.items ?? [];
   const isLoading = panelsLoading || instancesLoading;
+
+  // Filter events to only those related to our instances
+  const instanceNames = useMemo(
+    () => new Set(instances.map((i) => i.metadata.name)),
+    [instances]
+  );
+  const filteredEvents = useMemo(
+    () => (events ?? []).filter((e) => instanceNames.has(e.involvedObject.name)),
+    [events, instanceNames]
+  );
 
   return (
     <>
@@ -67,14 +69,13 @@ function InstancesContent({ plural }: { plural: string }) {
                 appName={appName}
               />
             </div>
-
             {/* Activity */}
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                Recent Activity
+                Recent Events
               </h2>
               <div className="rounded-xl border bg-card">
-                <ActivityFeed events={activity} />
+                <ActivityFeed events={filteredEvents} />
               </div>
             </div>
           </div>
