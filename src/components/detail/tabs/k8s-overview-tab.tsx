@@ -1,59 +1,9 @@
 "use client";
 
-import type { TabDef } from "./detail-view";
 import type { AppInstance } from "@/lib/k8s/types";
-import { OverviewTab } from "./tabs/overview-tab";
-import { YamlTab } from "./tabs/yaml-tab";
-import { K8sNodeGroupsTab } from "./tabs/k8s-node-groups-tab";
-import { K8sAddonsTab } from "./tabs/k8s-addons-tab";
-import { K8sControlPlaneTab } from "./tabs/k8s-control-plane-tab";
-
-export function getTabsForResource(
-  plural: string,
-  instance: AppInstance
-): TabDef[] {
-  switch (plural) {
-    case "kuberneteses":
-      return [
-        {
-          key: "overview",
-          label: "Overview",
-          content: <K8sOverview instance={instance} />,
-        },
-        {
-          key: "control-plane",
-          label: "Control Plane",
-          content: <K8sControlPlaneTab instance={instance} />,
-        },
-        {
-          key: "node-groups",
-          label: "Node Groups",
-          content: <K8sNodeGroupsTab instance={instance} />,
-        },
-        {
-          key: "addons",
-          label: "Addons",
-          content: <K8sAddonsTab instance={instance} />,
-        },
-        { key: "yaml", label: "YAML", content: <YamlTab instance={instance} /> },
-      ];
-
-    default:
-      return [
-        {
-          key: "overview",
-          label: "Overview",
-          content: <OverviewTab instance={instance} />,
-        },
-        { key: "yaml", label: "YAML", content: <YamlTab instance={instance} /> },
-      ];
-  }
-}
-
-// K8s overview is a summary combining key info from all sections
 import { Badge } from "@/components/ui/badge";
 
-function K8sOverview({ instance }: { instance: AppInstance }) {
+export function K8sOverviewTab({ instance }: { instance: AppInstance }) {
   const spec = instance.spec;
   const cp = spec.controlPlane as { replicas?: number } | undefined;
   const nodeGroups = spec.nodeGroups as Record<string, { instanceType?: string; minReplicas?: number; maxReplicas?: number }> | undefined;
@@ -67,7 +17,6 @@ function K8sOverview({ instance }: { instance: AppInstance }) {
 
   return (
     <div className="space-y-6">
-      {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <SummaryCard label="Version" value={String(spec.version ?? "—")} />
         <SummaryCard label="CP Replicas" value={String(cp?.replicas ?? "—")} />
@@ -75,9 +24,7 @@ function K8sOverview({ instance }: { instance: AppInstance }) {
         <SummaryCard label="Max Nodes" value={String(totalMaxNodes)} />
       </div>
 
-      {/* Quick info */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Node groups summary */}
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Node Groups
@@ -101,7 +48,6 @@ function K8sOverview({ instance }: { instance: AppInstance }) {
           </div>
         </div>
 
-        {/* Cluster info */}
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Cluster Info
@@ -114,7 +60,6 @@ function K8sOverview({ instance }: { instance: AppInstance }) {
         </div>
       </div>
 
-      {/* Conditions */}
       <div>
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
           Conditions
@@ -123,17 +68,10 @@ function K8sOverview({ instance }: { instance: AppInstance }) {
           {(instance.status?.conditions ?? []).map((c) => (
             <div key={c.type} className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    c.status === "True" ? "bg-emerald-500" : "bg-amber-500"
-                  }`}
-                />
+                <span className={`h-2 w-2 rounded-full ${c.status === "True" ? "bg-emerald-500" : "bg-amber-500"}`} />
                 <span className="text-sm font-medium">{c.type}</span>
               </div>
-              <Badge
-                variant={c.status === "True" ? "secondary" : "destructive"}
-                className="text-xs"
-              >
+              <Badge variant={c.status === "True" ? "secondary" : "destructive"} className="text-xs">
                 {c.status}
               </Badge>
             </div>

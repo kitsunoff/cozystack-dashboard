@@ -146,15 +146,43 @@ registerCustomForm("myplurals", MyForm);
 - `cfp-prefill.ts` — applies CustomFormsPrefill default values
 - `types.ts` — SchemaNode, CFOSpec, CFPSpec
 
+### Pluggable Component Registry
+
+`src/components/registry/` — central registry for pluggable UI components per resource type.
+
+| Registry | Function | What it controls |
+| --- | --- | --- |
+| Detail Tabs | `registerDetailTabs(plural, tabs)` | Tabs on instance detail page |
+| Detail Actions | `registerDetailActions(plural, actions)` | Action buttons on instance detail header |
+| List Actions | `registerListActions(plural, actions)` | Quick actions sidebar on instances list |
+| List Sections | `registerListSections(plural, sections)` | Custom sections between table and events |
+
+- `resolveDetailTabs(plural)` — returns registered tabs or defaults (Overview + YAML)
+- `registrations.ts` — side-effect import that activates all registrations
+- Defaults: all resources get Overview + YAML tabs, "Create" quick action
+
+To add custom tabs/actions for a resource, add registrations in `registrations.ts`:
+
+```typescript
+registerDetailTabs("vminstances", [
+  { key: "overview", label: "Overview", component: asTab(VMOverviewTab) },
+  { key: "console", label: "Console", component: asTab(VMConsoleTab) },
+  { key: "yaml", label: "YAML", component: asTab(YamlTab) },
+]);
+
+registerDetailActions("vminstances", [
+  { key: "start", label: "Start", icon: Play, action: ({ instance }) => ... },
+]);
+```
+
 ### Detail Pages
 
 `src/components/detail/` — instance detail view with tabs.
 
-- `detail-view.tsx` — header with status + tab navigation
-- `tab-registry.tsx` — returns tabs per resource type (K8s gets 5 tabs, others get Overview + YAML)
+- `detail-view.tsx` — header with status + tab navigation + action buttons
 - `tabs/overview-tab.tsx` — generic config display with conditions
 - `tabs/yaml-tab.tsx` — YAML representation with copy button
-- `tabs/k8s-*.tsx` — Kubernetes-specific: control plane, node groups, addons
+- `tabs/k8s-*.tsx` — Kubernetes-specific: control plane, node groups, addons, overview
 
 ### Routing
 

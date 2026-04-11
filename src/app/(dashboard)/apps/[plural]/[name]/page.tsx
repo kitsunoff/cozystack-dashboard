@@ -6,8 +6,11 @@ import { useMarketplacePanels, useInstance } from "@/lib/k8s/hooks";
 import { useNamespace } from "@/hooks/use-namespace";
 import { Header } from "@/components/layout/header";
 import { DetailView } from "@/components/detail/detail-view";
-import { getTabsForResource } from "@/components/detail/tab-registry";
+import { resolveDetailTabs, getDetailActions } from "@/components/registry";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Activate all registrations
+import "@/components/registry/registrations";
 
 function InstanceDetailContent({
   plural,
@@ -61,7 +64,8 @@ function InstanceDetailContent({
     );
   }
 
-  const tabs = getTabsForResource(plural, instance);
+  const tabs = resolveDetailTabs(plural);
+  const actions = getDetailActions(plural);
 
   return (
     <>
@@ -77,7 +81,13 @@ function InstanceDetailContent({
           >
             &larr; All {appName} instances
           </Link>
-          <DetailView instance={instance} tabs={tabs} />
+          <DetailView
+            instance={instance}
+            plural={plural}
+            namespace={namespace}
+            tabs={tabs}
+            actions={actions}
+          />
         </div>
       </div>
     </>
