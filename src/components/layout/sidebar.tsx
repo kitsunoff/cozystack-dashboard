@@ -49,7 +49,7 @@ export function Sidebar() {
   const { data: appDefs } = useApplicationDefinitions();
   const { namespace } = useNamespace();
 
-  const isMarketplace = pathname === "/marketplace";
+  const isPlatformApps = pathname === "/platform-apps";
 
   // Build plural → category map from ApplicationDefinitions
   const categoryMap = useMemo(() => {
@@ -88,18 +88,18 @@ export function Sidebar() {
         <CozystackLogo className="text-foreground" />
       </div>
 
-      {/* Marketplace — top-level item */}
+      {/* Platform Apps — top-level item */}
       <div className="px-3 pt-4 pb-2">
         <Link
-          href={`/marketplace?namespace=${namespace}`}
+          href={`/platform-apps?namespace=${namespace}`}
           className={cn(
             "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
-            isMarketplace
+            isPlatformApps
               ? "bg-primary/10 text-primary font-medium border-l-2 border-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
           )}
         >
-          Marketplace
+          Platform Apps
         </Link>
       </div>
 

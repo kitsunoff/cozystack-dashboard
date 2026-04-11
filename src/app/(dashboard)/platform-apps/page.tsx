@@ -11,7 +11,7 @@ export default function MarketplacePage() {
   return (
     <>
       <Header
-        title="Marketplace"
+        title="Platform Apps"
         subtitle="Deploy managed services to your cluster"
         search={{
           value: searchQuery,
