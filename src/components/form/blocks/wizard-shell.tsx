@@ -22,6 +22,8 @@ interface WizardShellProps {
   editName?: string;
   /** Existing spec values to prefill the form (edit mode) */
   existingValues?: Record<string, unknown>;
+  /** Custom submit handler — receives (name, values, isEdit). If provided, replaces default create/patch logic. */
+  onSubmit?: (name: string, values: Record<string, unknown>, isEdit: boolean) => Promise<void>;
   children: React.ReactNode;
 }
 
@@ -36,6 +38,7 @@ export function WizardShell({
   submitLabel,
   editName,
   existingValues,
+  onSubmit,
   children,
 }: WizardShellProps) {
   const initialValues = existingValues
@@ -53,6 +56,7 @@ export function WizardShell({
         backHref={backHref}
         submitLabel={submitLabel}
         editName={editName}
+        onSubmit={onSubmit}
       >
         {children}
       </WizardShellInner>
@@ -69,6 +73,7 @@ function WizardShellInner({
   backHref,
   submitLabel,
   editName,
+  onSubmit: customSubmit,
   children,
 }: Omit<WizardShellProps, "schema" | "existingValues">) {
   const router = useRouter();
@@ -85,7 +90,9 @@ function WizardShellInner({
     setError(null);
 
     try {
-      if (isEdit) {
+      if (customSubmit) {
+        await customSubmit(name.trim(), values, isEdit);
+      } else if (isEdit) {
         await k8sPatch(
           endpoints.instance(plural, namespace, name.trim()),
           { spec: values }
