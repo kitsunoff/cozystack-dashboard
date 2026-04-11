@@ -15,9 +15,17 @@ export interface KubeConfig {
 
 let cachedConfig: KubeConfig | null = null;
 let cachedAgent: https.Agent | null = null;
+let configCachedAt = 0;
+const CONFIG_TTL_MS = 5 * 60_000; // 5 minutes — covers SA token rotation (1h)
 
 export function getKubeConfig(): KubeConfig {
-  if (cachedConfig) return cachedConfig;
+  const now = Date.now();
+  if (cachedConfig && now - configCachedAt < CONFIG_TTL_MS) {
+    return cachedConfig;
+  }
+
+  // Invalidate agent when config is refreshed
+  cachedAgent = null;
 
   // 1. Explicit env vars take priority
   if (process.env.KUBE_API_URL) {
@@ -29,6 +37,7 @@ export function getKubeConfig(): KubeConfig {
       clientKey: null,
       skipTLSVerify: process.env.KUBE_SKIP_TLS_VERIFY === "true",
     };
+    configCachedAt = now;
     return cachedConfig;
   }
 
@@ -44,6 +53,7 @@ export function getKubeConfig(): KubeConfig {
       clientKey: null,
       skipTLSVerify: false,
     };
+    configCachedAt = now;
     return cachedConfig;
   }
 
@@ -129,6 +139,7 @@ export function getKubeConfig(): KubeConfig {
     clientKey,
     skipTLSVerify: cluster.cluster["insecure-skip-tls-verify"] === true,
   };
+  configCachedAt = now;
 
   return cachedConfig;
 }
