@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -244,6 +245,7 @@ function RowActions({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleOpen = () => {
     if (buttonRef.current) {
@@ -264,8 +266,8 @@ function RowActions({
       const { k8sDelete } = await import("@/lib/k8s/client");
       const { endpoints } = await import("@/lib/k8s/endpoints");
       await k8sDelete(endpoints.instance(plural, namespace, name));
+      await queryClient.invalidateQueries({ queryKey: ["instances", plural] });
       setOpen(false);
-      router.refresh();
     } catch {
       setDeleting(false);
     }
