@@ -174,7 +174,7 @@ export interface TenantPermissions {
   resources: ResourcePermission[];
 }
 
-interface SelfSubjectRulesReviewResponse {
+export interface SelfSubjectRulesReviewResponse {
   status: {
     resourceRules: Array<{
       verbs: string[];
@@ -184,7 +184,7 @@ interface SelfSubjectRulesReviewResponse {
   };
 }
 
-function verbsToOpType(verbs: string[]): OpType {
+export function verbsToOpType(verbs: string[]): OpType {
   if (verbs.includes("*")) return "*";
   if (verbs.includes("delete")) return "delete";
   if (verbs.some((v) => ["create", "update", "patch"].includes(v)))
@@ -206,7 +206,7 @@ function higherOp(a: OpType, b: OpType): OpType {
   return OP_PRIORITY[a] >= OP_PRIORITY[b] ? a : b;
 }
 
-function parseRulesReview(
+export function parseRulesReview(
   response: SelfSubjectRulesReviewResponse
 ): TenantPermissions {
   const resourceMap = new Map<string, OpType>();
