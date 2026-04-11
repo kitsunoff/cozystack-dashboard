@@ -254,17 +254,17 @@ function RowActions() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-50 w-36 rounded-lg border bg-card shadow-md py-1"
+            className="fixed z-50 w-36 rounded-lg border bg-popover text-popover-foreground shadow-lg py-1"
             style={{ top: pos.top, left: pos.left }}
           >
-            <button className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors">
+            <button className="flex w-full px-3 py-1.5 text-sm text-left hover:bg-accent rounded-sm transition-colors">
               View YAML
             </button>
-            <button className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors">
+            <button className="flex w-full px-3 py-1.5 text-sm text-left hover:bg-accent rounded-sm transition-colors">
               Edit
             </button>
-            <div className="border-t my-1" />
-            <button className="w-full px-3 py-1.5 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors">
+            <div className="mx-1 my-1 h-px bg-border" />
+            <button className="flex w-full px-3 py-1.5 text-sm text-left text-destructive hover:bg-destructive/10 rounded-sm transition-colors">
               Delete
             </button>
           </div>
