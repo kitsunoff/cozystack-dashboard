@@ -1,31 +1,43 @@
 "use client";
 
 import { useState } from "react";
+import type { ComponentType } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn, formatAge } from "@/lib/utils";
 import type { AppInstance } from "@/lib/k8s/types";
-
-export interface TabDef {
-  key: string;
-  label: string;
-  content: React.ReactNode;
-}
+import type { TabDef, ActionDef } from "@/components/registry";
 
 interface DetailViewProps {
   instance: AppInstance;
+  plural: string;
+  namespace: string;
   tabs: TabDef[];
+  actions?: ActionDef[];
 }
 
-export function DetailView({ instance, tabs }: DetailViewProps) {
+export function DetailView({ instance, plural, namespace, tabs, actions }: DetailViewProps) {
   const [activeTab, setActiveTab] = useState(tabs[0]?.key ?? "");
+  const router = useRouter();
 
   const ready = instance.status?.conditions?.find((c) => c.type === "Ready");
   const isReady = ready?.status === "True";
 
+  const ActiveComponent = tabs.find((t) => t.key === activeTab)?.component;
+
+  const handleAction = (action: ActionDef) => {
+    if (typeof action.action === "string") {
+      router.push(action.action);
+    } else {
+      action.action({ plural, namespace, instance });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Instance header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-semibold">{instance.metadata.name}</h2>
@@ -57,6 +69,23 @@ export function DetailView({ instance, tabs }: DetailViewProps) {
             )}
           </div>
         </div>
+
+        {/* Detail actions */}
+        {actions && actions.length > 0 && (
+          <div className="flex gap-2">
+            {actions.map((action) => (
+              <Button
+                key={action.key}
+                variant={action.variant === "destructive" ? "destructive" : "outline"}
+                size="sm"
+                onClick={() => handleAction(action)}
+              >
+                {action.icon && <action.icon className="h-4 w-4" />}
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
@@ -81,7 +110,9 @@ export function DetailView({ instance, tabs }: DetailViewProps) {
 
       {/* Tab content */}
       <div>
-        {tabs.find((t) => t.key === activeTab)?.content}
+        {ActiveComponent && (
+          <ActiveComponent instance={instance} plural={plural} namespace={namespace} />
+        )}
       </div>
     </div>
   );

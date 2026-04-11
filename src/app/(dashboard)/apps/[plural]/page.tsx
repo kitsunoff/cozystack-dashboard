@@ -13,7 +13,11 @@ import { InstanceTable } from "@/components/instances/instance-table";
 import { InstanceMetrics } from "@/components/instances/instance-metrics";
 import { QuickActions } from "@/components/instances/quick-actions";
 import { ActivityFeed } from "@/components/instances/activity-feed";
+import { getListSections } from "@/components/registry";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Activate registrations
+import "@/components/registry/registrations";
 
 function InstancesContent({ plural }: { plural: string }) {
   const { namespace } = useNamespace();
@@ -37,8 +41,9 @@ function InstancesContent({ plural }: { plural: string }) {
   );
 
   const releasePrefix = appDef?.spec.release?.prefix ?? "";
-
   const { data: events } = useEvents(namespace, instanceNames, releasePrefix);
+
+  const listSections = getListSections(plural);
 
   return (
     <>
@@ -74,6 +79,22 @@ function InstancesContent({ plural }: { plural: string }) {
                 appName={appName}
               />
             </div>
+
+            {/* Pluggable sections */}
+            {listSections.map((section) => (
+              <div key={section.key}>
+                {section.label && (
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+                    {section.label}
+                  </h2>
+                )}
+                <section.component
+                  instances={instances}
+                  plural={plural}
+                  namespace={namespace}
+                />
+              </div>
+            ))}
 
             {/* Activity */}
             <div>
