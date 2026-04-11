@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { FormBlockProps } from "./types";
-import { schemaEnum, schemaDefault, schemaHas } from "./types";
+import { schemaEnum, schemaDefault, schemaHas, initFormValue } from "./types";
 
 const PRESET_SPECS: Record<string, { cpu: string; memory: string }> = {
   nano: { cpu: "0.1", memory: "128Mi" },
@@ -19,22 +18,22 @@ const PRESET_SPECS: Record<string, { cpu: string; memory: string }> = {
   "2xlarge": { cpu: "8", memory: "8Gi" },
 };
 
-/**
- * Resources picker — preset cards + optional custom CPU/Memory.
- * Shows nothing if schema has neither "resourcesPreset" nor "resources".
- */
 export function ResourcesPicker({ schema, basePath = [], title = "Resources" }: FormBlockProps) {
   const hasPreset = schemaHas(schema, "resourcesPreset");
   const hasCustom = schemaHas(schema, "resources");
-  if (!hasPreset && !hasCustom) return null;
 
   const { getValue, setValue } = useFormContext();
   const presets = schemaEnum(schema, "resourcesPreset") ?? Object.keys(PRESET_SPECS);
   const defaultPreset = schemaDefault<string>(schema, "resourcesPreset") ?? "micro";
-
   const presetPath = [...basePath, "resourcesPreset"];
-  const currentPreset = (getValue(presetPath) as string) ?? defaultPreset;
 
+  useEffect(() => {
+    if (hasPreset) initFormValue(getValue, setValue, presetPath, defaultPreset);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!hasPreset && !hasCustom) return null;
+
+  const currentPreset = (getValue(presetPath) as string) ?? defaultPreset;
   const [showCustom, setShowCustom] = useState(false);
   const cpuPath = [...basePath, "resources", "cpu"];
   const memPath = [...basePath, "resources", "memory"];

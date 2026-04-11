@@ -40,6 +40,18 @@ export function schemaDefault<T>(schema: Record<string, unknown>, key: string): 
   return schemaProp(schema, key)?.default as T | undefined;
 }
 
+/** Initialize a form value if it's undefined. Call in useEffect on mount. */
+export function initFormValue(
+  getValue: (path: string[]) => unknown,
+  setValue: (path: string[], value: unknown) => void,
+  path: string[],
+  defaultValue: unknown
+): void {
+  if (getValue(path) === undefined && defaultValue !== undefined) {
+    setValue(path, defaultValue);
+  }
+}
+
 /** Navigate into nested schema: schemaAt(root, ["kafka"]) → kafka's schema object */
 export function schemaAt(
   schema: Record<string, unknown>,

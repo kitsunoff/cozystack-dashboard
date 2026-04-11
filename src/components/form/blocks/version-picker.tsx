@@ -1,21 +1,24 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { cn } from "@/lib/utils";
 import type { FormBlockProps } from "./types";
-import { schemaEnum, schemaDefault } from "./types";
+import { schemaEnum, schemaDefault, initFormValue } from "./types";
 
-/**
- * Version picker — renders enum values as selectable buttons.
- * Shows nothing if schema has no "version" with enum.
- */
 export function VersionPicker({ schema, basePath = [], title = "Version" }: FormBlockProps) {
   const versions = schemaEnum(schema, "version");
-  if (!versions) return null;
-
+  const defaultVersion = schemaDefault<string>(schema, "version") ?? versions?.[0];
   const { getValue, setValue } = useFormContext();
   const path = [...basePath, "version"];
-  const current = (getValue(path) as string) ?? schemaDefault<string>(schema, "version") ?? versions[0];
+
+  useEffect(() => {
+    initFormValue(getValue, setValue, path, defaultVersion);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!versions) return null;
+
+  const current = (getValue(path) as string) ?? defaultVersion;
 
   return (
     <div className="space-y-2">
