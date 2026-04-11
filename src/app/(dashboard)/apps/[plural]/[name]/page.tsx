@@ -6,7 +6,8 @@ import { useMarketplacePanels, useInstance } from "@/lib/k8s/hooks";
 import { useNamespace } from "@/hooks/use-namespace";
 import { Header } from "@/components/layout/header";
 import { DetailView } from "@/components/detail/detail-view";
-import { resolveDetailTabs, getDetailActions } from "@/components/registry";
+import { resolveDetailTabs } from "@/components/registry";
+import { DetailQuickActions } from "@/components/instances/detail-quick-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Activate all registrations
@@ -65,7 +66,6 @@ function InstanceDetailContent({
   }
 
   const tabs = resolveDetailTabs(plural);
-  const actions = getDetailActions(plural);
 
   return (
     <>
@@ -74,20 +74,28 @@ function InstanceDetailContent({
         subtitle={panel?.spec.description}
       />
       <div className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-5xl">
-          <Link
-            href={`/apps/${plural}?namespace=${namespace}`}
-            className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-6"
-          >
-            &larr; All {appName} instances
-          </Link>
-          <DetailView
-            instance={instance}
-            plural={plural}
-            namespace={namespace}
-            tabs={tabs}
-            actions={actions}
-          />
+        <div className="flex gap-8">
+          <div className="flex-1 min-w-0">
+            <Link
+              href={`/apps/${plural}?namespace=${namespace}`}
+              className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-6"
+            >
+              &larr; All {appName} instances
+            </Link>
+            <DetailView
+              instance={instance}
+              plural={plural}
+              namespace={namespace}
+              tabs={tabs}
+            />
+          </div>
+          <div className="w-56 shrink-0 space-y-4">
+            <DetailQuickActions
+              instance={instance}
+              plural={plural}
+              namespace={namespace}
+            />
+          </div>
         </div>
       </div>
     </>
