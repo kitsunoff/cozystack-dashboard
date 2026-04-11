@@ -295,10 +295,11 @@ export function useEvents(
         }
       }
 
-      // Deduplicate by reason+message+involvedObject — keep latest, sum counts
+      // Deduplicate by involvedObject+reason — keep latest, sum counts
+      // (message often contains timestamps that differ between duplicates)
       const deduped = new Map<string, K8sEvent>();
       for (const e of filtered) {
-        const key = `${e.involvedObject.name}::${e.reason}::${e.message}`;
+        const key = `${e.involvedObject.name}::${e.reason}`;
         const existing = deduped.get(key);
         if (existing) {
           const existingTs = existing.lastTimestamp || existing.eventTime || existing.metadata.creationTimestamp || "";
