@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ComponentType } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn, formatAge } from "@/lib/utils";
@@ -19,18 +20,27 @@ interface DetailViewProps {
 
 export function DetailView({ instance, plural, namespace, tabs, actions }: DetailViewProps) {
   const [activeTab, setActiveTab] = useState(tabs[0]?.key ?? "");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const ready = instance.status?.conditions?.find((c) => c.type === "Ready");
   const isReady = ready?.status === "True";
 
   const ActiveComponent = tabs.find((t) => t.key === activeTab)?.component;
 
-  const handleAction = (action: ActionDef) => {
+  const handleAction = async (action: ActionDef) => {
     if (typeof action.action === "string") {
       router.push(action.action);
     } else {
-      action.action({ plural, namespace, instance });
+      setActionLoading(action.key);
+      try {
+        await action.action({ plural, namespace, instance });
+        await queryClient.invalidateQueries({ queryKey: ["instance", plural] });
+        await queryClient.invalidateQueries({ queryKey: ["instances", plural] });
+      } finally {
+        setActionLoading(null);
+      }
     }
   };
 
@@ -79,9 +89,10 @@ export function DetailView({ instance, plural, namespace, tabs, actions }: Detai
                 variant={action.variant === "destructive" ? "destructive" : "outline"}
                 size="sm"
                 onClick={() => handleAction(action)}
+                disabled={actionLoading !== null}
               >
-                {action.icon && <action.icon className="h-4 w-4" />}
-                {action.label}
+                {action.icon && <action.icon className={cn("h-4 w-4", actionLoading === action.key && "animate-spin")} />}
+                {actionLoading === action.key ? "..." : action.label}
               </Button>
             ))}
           </div>
