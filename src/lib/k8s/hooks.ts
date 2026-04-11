@@ -281,7 +281,9 @@ export function useEvents(
     select: (data) => {
       let filtered = data.items;
 
-      if (instanceNames && instanceNames.length > 0) {
+      if (instanceNames) {
+        if (instanceNames.length === 0) return [];
+
         if (releasePrefix) {
           // Prefix match: child resources named {prefix}{instanceName}-xxx
           const prefixes = instanceNames.map((n) => `${releasePrefix}${n}`);
