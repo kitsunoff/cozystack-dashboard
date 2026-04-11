@@ -1,22 +1,25 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { cn } from "@/lib/utils";
 import type { FormBlockProps } from "./types";
-import { schemaHas, schemaDefault } from "./types";
+import { schemaHas, schemaDefault, initFormValue } from "./types";
 
 const COMMON_REPLICAS = [1, 2, 3, 5];
 
-/**
- * Replicas picker — common values as buttons.
- * Shows nothing if schema has no "replicas".
- */
 export function ReplicasPicker({ schema, basePath = [], title = "Replicas" }: FormBlockProps) {
-  if (!schemaHas(schema, "replicas")) return null;
-
+  const defaultVal = schemaDefault<number>(schema, "replicas") ?? 1;
   const { getValue, setValue } = useFormContext();
   const path = [...basePath, "replicas"];
-  const current = (getValue(path) as number) ?? schemaDefault<number>(schema, "replicas") ?? 1;
+
+  useEffect(() => {
+    initFormValue(getValue, setValue, path, defaultVal);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!schemaHas(schema, "replicas")) return null;
+
+  const current = (getValue(path) as number) ?? defaultVal;
 
   return (
     <div className="space-y-2">

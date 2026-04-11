@@ -131,6 +131,11 @@ function buildDefaults(schema: Record<string, unknown>): Record<string, unknown>
   for (const [key, prop] of Object.entries(props)) {
     if (prop.default !== undefined) {
       result[key] = prop.default;
+    } else if (prop.type === "object" && prop.properties) {
+      const nested = buildDefaults(prop as Record<string, unknown>);
+      if (Object.keys(nested).length > 0) {
+        result[key] = nested;
+      }
     }
   }
   return result;

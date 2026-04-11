@@ -1,26 +1,31 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { FormBlockProps } from "./types";
-import { schemaHas, schemaDefault } from "./types";
+import { schemaHas, schemaDefault, initFormValue } from "./types";
 
-/**
- * Storage picker — size input + storage class.
- * Shows nothing if schema has neither "size" nor "storageClass".
- */
 export function StoragePicker({ schema, basePath = [], title = "Storage" }: FormBlockProps) {
   const hasSize = schemaHas(schema, "size");
   const hasClass = schemaHas(schema, "storageClass");
-  if (!hasSize && !hasClass) return null;
 
   const { getValue, setValue } = useFormContext();
-
   const sizePath = [...basePath, "size"];
   const classPath = [...basePath, "storageClass"];
-  const currentSize = (getValue(sizePath) as string) ?? schemaDefault<string>(schema, "size") ?? "10Gi";
-  const currentClass = (getValue(classPath) as string) ?? schemaDefault<string>(schema, "storageClass") ?? "";
+  const defaultSize = schemaDefault<string>(schema, "size") ?? "10Gi";
+  const defaultClass = schemaDefault<string>(schema, "storageClass") ?? "";
+
+  useEffect(() => {
+    if (hasSize) initFormValue(getValue, setValue, sizePath, defaultSize);
+    if (hasClass) initFormValue(getValue, setValue, classPath, defaultClass);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!hasSize && !hasClass) return null;
+
+  const currentSize = (getValue(sizePath) as string) ?? defaultSize;
+  const currentClass = (getValue(classPath) as string) ?? defaultClass;
 
   return (
     <div className="space-y-3">
