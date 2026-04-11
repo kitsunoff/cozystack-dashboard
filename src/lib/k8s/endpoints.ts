@@ -53,4 +53,8 @@ export const endpoints = {
   // Core API resources
   namespaces: () => "/api/v1/namespaces",
   events: (namespace: string) => `/api/v1/namespaces/${namespace}/events`,
+
+  // Cluster API resources
+  machineDeployments: (namespace: string) =>
+    `/apis/cluster.x-k8s.io/v1beta1/namespaces/${namespace}/machinedeployments`,
 } as const;

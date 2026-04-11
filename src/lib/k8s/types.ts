@@ -202,6 +202,20 @@ export interface ApplicationDefinition {
   };
 }
 
+// Cluster API MachineDeployment
+export interface MachineDeployment {
+  apiVersion: string;
+  kind: "MachineDeployment";
+  metadata: ObjectMeta;
+  status?: {
+    replicas?: number;
+    readyReplicas?: number;
+    availableReplicas?: number;
+    unavailableReplicas?: number;
+    phase?: string;
+  };
+}
+
 // Generic app instance (apps.cozystack.io/v1alpha1)
 
 export interface AppInstance {
