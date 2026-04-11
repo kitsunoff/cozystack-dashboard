@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -18,21 +16,31 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { k8sCreate } from "@/lib/k8s/client";
+import { WizardShell } from "@/components/form/blocks/wizard-shell";
+import { ExternalToggle } from "@/components/form/blocks";
+import { useFormContext } from "@/components/form/form-context";
+import { k8sCreate, k8sPatch } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 import { cn } from "@/lib/utils";
 import type { CustomFormProps } from "../registry";
 
-// Popular profiles shown as quick-pick cards
-const POPULAR_PROFILES = [
-  "ubuntu", "fedora", "alpine", "centos.stream10", "rhel.9", "windows.11",
-];
+// --- Schema helpers ---
 
-// Visual metadata for profiles
+function extractEnum(schema: Record<string, unknown> | undefined, key: string): string[] | null {
+  if (!schema) return null;
+  const props = schema.properties as Record<string, Record<string, unknown>> | undefined;
+  const prop = props?.[key];
+  const e = prop?.enum as string[] | undefined;
+  return e?.filter((v) => v !== "") ?? null;
+}
+
+// --- Profile display ---
+
+const POPULAR_PROFILES = ["ubuntu", "fedora", "alpine", "centos.stream10", "rhel.9", "windows.11"];
+
 const PROFILE_META: Record<string, { label: string; icon: string }> = {
   ubuntu: { label: "Ubuntu", icon: "🟠" },
   fedora: { label: "Fedora", icon: "🔵" },
-  "fedora.arm64": { label: "Fedora ARM64", icon: "🔵" },
   alpine: { label: "Alpine", icon: "🔷" },
   cirros: { label: "CirrOS", icon: "☁️" },
   sles: { label: "SLES", icon: "🟢" },
@@ -47,8 +55,7 @@ const PROFILE_PATTERNS: Array<{ match: RegExp; icon: string; prefix: string }> =
 ];
 
 function profileLabel(value: string): string {
-  const exact = PROFILE_META[value];
-  if (exact) return exact.label;
+  if (PROFILE_META[value]) return PROFILE_META[value].label;
   for (const p of PROFILE_PATTERNS) {
     if (p.match.test(value)) {
       const suffix = value.replace(p.match, "").replace(/^\./, "").replace(/\./g, " ");
@@ -59,8 +66,7 @@ function profileLabel(value: string): string {
 }
 
 function profileIcon(value: string): string {
-  const exact = PROFILE_META[value];
-  if (exact) return exact.icon;
+  if (PROFILE_META[value]) return PROFILE_META[value].icon;
   for (const p of PROFILE_PATTERNS) {
     if (p.match.test(value)) return p.icon;
   }
@@ -75,27 +81,7 @@ function profileCategory(value: string): string {
   return "Other";
 }
 
-function extractProfileEnum(schema?: Record<string, unknown>): string[] | null {
-  if (!schema) return null;
-  const props = schema.properties as Record<string, unknown> | undefined;
-  if (!props) return null;
-  const instanceProfile = props.instanceProfile as Record<string, unknown> | undefined;
-  if (!instanceProfile) return null;
-  const enumValues = instanceProfile.enum as string[] | undefined;
-  if (!enumValues || !Array.isArray(enumValues)) return null;
-  return enumValues.filter((v) => v !== "");
-}
-
-function extractRunStrategyEnum(schema?: Record<string, unknown>): string[] | null {
-  if (!schema) return null;
-  const props = schema.properties as Record<string, unknown> | undefined;
-  if (!props) return null;
-  const runStrategy = props.runStrategy as Record<string, unknown> | undefined;
-  if (!runStrategy) return null;
-  const enumValues = runStrategy.enum as string[] | undefined;
-  if (!enumValues || !Array.isArray(enumValues)) return null;
-  return enumValues;
-}
+// --- Instance types ---
 
 const INSTANCE_TYPES = [
   { value: "u1.micro", label: "Micro", cpu: "1 vCPU", ram: "1 GiB" },
@@ -114,39 +100,105 @@ const RUN_STRATEGIES = [
   { value: "Once", description: "Run once" },
 ];
 
-type BootSource = "preset" | "http" | "disk";
-
-interface DiskEntry {
-  name: string;
-  bus: string;
-}
+// --- Main form ---
 
 export function VMInstanceForm({
-  plural,
-  namespace,
-  apiGroup,
-  apiVersion,
-  kind,
-  backHref,
-  openAPISchema,
+  plural, namespace, apiGroup, apiVersion, kind, backHref,
+  openAPISchema, editName, editValues,
 }: CustomFormProps) {
-  const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const schema = openAPISchema ?? {};
 
-  // Dynamic profiles from OpenAPI schema
-  const allProfiles = useMemo(
-    () => extractProfileEnum(openAPISchema),
-    [openAPISchema]
+  const handleSubmit = async (name: string, values: Record<string, unknown>, isEdit: boolean) => {
+    if (isEdit) {
+      await k8sPatch(
+        endpoints.instance(plural, namespace, name),
+        { spec: values }
+      );
+    } else {
+      await k8sCreate(endpoints.instances(plural, namespace), {
+        apiVersion: `${apiGroup}/${apiVersion}`,
+        kind,
+        metadata: { name, namespace },
+        spec: values,
+      });
+    }
+  };
+
+  return (
+    <WizardShell
+      schema={schema}
+      plural={plural}
+      namespace={namespace}
+      apiGroup={apiGroup}
+      apiVersion={apiVersion}
+      kind={kind}
+      backHref={backHref}
+      submitLabel="VM Instance"
+      editName={editName}
+      existingValues={editValues}
+      onSubmit={handleSubmit}
+    >
+      <Separator />
+      <RunStrategyPicker schema={schema} />
+      <Separator />
+      <BootImageSection schema={schema} />
+      <Separator />
+      <InstanceTypePicker />
+      <Separator />
+      <ExternalToggle schema={schema} />
+      <Separator />
+      <ExternalConfig schema={schema} />
+      <Separator />
+      <SSHKeysSection />
+      <Separator />
+      <CloudInitSection />
+    </WizardShell>
   );
+}
 
-  // Popular profiles that exist in the schema
+// --- Inner sections using FormContext ---
+
+function RunStrategyPicker({ schema }: { schema: Record<string, unknown> }) {
+  const strategies = extractEnum(schema, "runStrategy") ?? RUN_STRATEGIES.map((s) => s.value);
+  const { getValue, setValue } = useFormContext();
+  const current = (getValue(["runStrategy"]) as string) ?? "Always";
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">Run Strategy</Label>
+      <div className="flex flex-wrap gap-2">
+        {strategies.map((v) => {
+          const desc = RUN_STRATEGIES.find((s) => s.value === v)?.description;
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setValue(["runStrategy"], v)}
+              className={cn(
+                "rounded-lg border px-3 py-1.5 text-sm font-medium transition-all",
+                current === v
+                  ? "border-foreground bg-accent ring-1 ring-foreground"
+                  : "hover:border-foreground/30 hover:bg-accent/50"
+              )}
+            >
+              {v}{desc && <span className="text-muted-foreground ml-1">— {desc}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BootImageSection({ schema }: { schema: Record<string, unknown> }) {
+  const { getValue, setValue } = useFormContext();
+  const profile = (getValue(["instanceProfile"]) as string) ?? "ubuntu";
+
+  const allProfiles = useMemo(() => extractEnum(schema, "instanceProfile"), [schema]);
   const popularProfiles = useMemo(() => {
     if (!allProfiles) return POPULAR_PROFILES;
     return POPULAR_PROFILES.filter((p) => allProfiles.includes(p));
   }, [allProfiles]);
-
-  // All profiles grouped by category (for the dropdown)
   const groupedProfiles = useMemo(() => {
     const profiles = allProfiles ?? POPULAR_PROFILES;
     const groups = new Map<string, string[]>();
@@ -158,480 +210,156 @@ export function VMInstanceForm({
     return groups;
   }, [allProfiles]);
 
-  // Dynamic run strategies from schema
-  const runStrategies = useMemo(() => {
-    const enumValues = extractRunStrategyEnum(openAPISchema);
-    if (!enumValues) return RUN_STRATEGIES;
-    return enumValues.map((v) => ({
-      value: v,
-      description: RUN_STRATEGIES.find((s) => s.value === v)?.description ?? v,
-    }));
-  }, [openAPISchema]);
-
-  // Form state
-  const [name, setName] = useState("");
-  const [bootSource, setBootSource] = useState<BootSource>("preset");
-  const [instanceProfile, setInstanceProfile] = useState("ubuntu");
-  const [customImageUrl, setCustomImageUrl] = useState("");
-  const [existingDiskName, setExistingDiskName] = useState("");
-  const [bootDiskSize, setBootDiskSize] = useState("10Gi");
-  const [instanceType, setInstanceType] = useState("u1.medium");
-  const [runStrategy, setRunStrategy] = useState("Always");
-  const [external, setExternal] = useState(false);
-  const [externalMethod, setExternalMethod] = useState("PortList");
-  const [externalPorts, setExternalPorts] = useState("22");
-  const [disks, setDisks] = useState<DiskEntry[]>([]);
-  const [sshKeys, setSshKeys] = useState("");
-  const [cloudInit, setCloudInit] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const allDisks = [...disks.filter((d) => d.name)];
-
-      // Create boot disk for custom image sources
-      if (bootSource === "http" && customImageUrl) {
-        const bootDiskName = `${name.trim()}-boot`;
-        await k8sCreate(endpoints.instances("vmdisks", namespace), {
-          apiVersion: `${apiGroup}/${apiVersion}`,
-          kind: "VMDisk",
-          metadata: { name: bootDiskName, namespace },
-          spec: {
-            source: { http: { url: customImageUrl } },
-            storage: bootDiskSize,
-            storageClass: "replicated",
-          },
-        });
-        allDisks.unshift({ name: bootDiskName, bus: "virtio" });
-      } else if (bootSource === "disk" && existingDiskName) {
-        allDisks.unshift({ name: existingDiskName, bus: "virtio" });
-      }
-
-      const resource = {
-        apiVersion: `${apiGroup}/${apiVersion}`,
-        kind,
-        metadata: { name: name.trim(), namespace },
-        spec: {
-          ...(bootSource === "preset" && instanceProfile
-            ? { instanceProfile }
-            : {}),
-          instanceType,
-          runStrategy,
-          external,
-          ...(external && {
-            externalMethod,
-            externalPorts: externalPorts
-              .split(",")
-              .map((p) => parseInt(p.trim(), 10))
-              .filter((p) => !isNaN(p)),
-          }),
-          disks: allDisks,
-          sshKeys: sshKeys
-            .split("\n")
-            .map((k) => k.trim())
-            .filter(Boolean),
-          ...(cloudInit && { cloudInit }),
-        },
-      };
-
-      await k8sCreate(endpoints.instances(plural, namespace), resource);
-      router.push(backHref);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create VM");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Name */}
-      <Section title="General">
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Name</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="my-vm"
-            required
-            autoFocus
-          />
-        </div>
+    <div className="space-y-4">
+      <label className="text-sm font-medium">Boot Image</label>
 
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Run Strategy</Label>
-          <Select value={runStrategy} onValueChange={(v) => { if (v) setRunStrategy(v); }}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {runStrategies.map((s) => (
-                <SelectItem key={s.value} value={s.value}>
-                  <span>{s.value}</span>
-                  <span className="text-muted-foreground ml-2">— {s.description}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </Section>
-
-      <Separator />
-
-      {/* Boot Source */}
-      <Section title="Boot Image">
-        {/* Source type tabs */}
-        <div className="flex gap-1 rounded-lg border p-1 w-fit">
-          {([
-            { key: "preset", label: "Preset Image" },
-            { key: "http", label: "HTTP URL" },
-            { key: "disk", label: "Existing Disk" },
-          ] as const).map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setBootSource(tab.key)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                bootSource === tab.key
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Preset image picker */}
-        {bootSource === "preset" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-              {popularProfiles.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setInstanceProfile(value)}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-lg border px-3 py-3 transition-all",
-                    instanceProfile === value
-                      ? "border-foreground bg-accent ring-1 ring-foreground"
-                      : "hover:border-foreground/30 hover:bg-accent/50"
-                  )}
-                >
-                  <span className="text-xl">{profileIcon(value)}</span>
-                  <span className="text-xs font-medium text-center">{profileLabel(value)}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">All images</Label>
-              <Select value={instanceProfile} onValueChange={(v) => { if (v) setInstanceProfile(v); }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue>
-                    {profileIcon(instanceProfile)} {profileLabel(instanceProfile)}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent side="bottom" alignItemWithTrigger={false} className="max-h-72">
-                  {Array.from(groupedProfiles.entries()).map(([category, profiles]) => (
-                    <SelectGroup key={category}>
-                      <SelectLabel>{category}</SelectLabel>
-                      {profiles.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {profileIcon(value)} {profileLabel(value)}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        {/* HTTP URL source */}
-        {bootSource === "http" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Image URL</Label>
-              <Input
-                value={customImageUrl}
-                onChange={(e) => setCustomImageUrl(e.target.value)}
-                placeholder="https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
-                type="url"
-              />
-              <p className="text-xs text-muted-foreground">
-                Direct link to a qcow2, raw, or ISO image
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Boot Disk Size</Label>
-              <Input
-                value={bootDiskSize}
-                onChange={(e) => setBootDiskSize(e.target.value)}
-                placeholder="10Gi"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Existing disk */}
-        {bootSource === "disk" && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">VM Disk Name</Label>
-            <Input
-              value={existingDiskName}
-              onChange={(e) => setExistingDiskName(e.target.value)}
-              placeholder="my-boot-disk"
-            />
-            <p className="text-xs text-muted-foreground">
-              Name of an existing VM Disk in this namespace
-            </p>
-          </div>
-        )}
-      </Section>
-
-      <Separator />
-
-      {/* Instance Type */}
-      <Section title="Instance Type">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {INSTANCE_TYPES.map((it) => (
-            <button
-              key={it.value}
-              type="button"
-              onClick={() => setInstanceType(it.value)}
-              className={cn(
-                "flex flex-col rounded-lg border px-3 py-3 text-left transition-all",
-                instanceType === it.value
-                  ? "border-foreground bg-accent ring-1 ring-foreground"
-                  : "hover:border-foreground/30 hover:bg-accent/50"
-              )}
-            >
-              <div className="text-sm font-medium">{it.label}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">
-                {it.cpu} / {it.ram}
-              </div>
-              <Badge variant="secondary" className="text-[10px] mt-1.5 w-fit">
-                {it.value}
-              </Badge>
-            </button>
-          ))}
-        </div>
-      </Section>
-
-      <Separator />
-
-      {/* Disks */}
-      <Section title="Disks">
-        {disks.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            No additional disks. The boot disk is created automatically.
-          </p>
-        )}
-        {disks.map((disk, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <Input
-              value={disk.name}
-              onChange={(e) => {
-                const next = [...disks];
-                next[i] = { ...next[i], name: e.target.value };
-                setDisks(next);
-              }}
-              placeholder="disk-name"
-              className="flex-1"
-            />
-            <Select
-              value={disk.bus || "virtio"}
-              onValueChange={(v) => {
-                if (!v) return;
-                const next = [...disks];
-                next[i] = { ...next[i], bus: v };
-                setDisks(next);
-              }}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="virtio">virtio</SelectItem>
-                <SelectItem value="sata">sata</SelectItem>
-                <SelectItem value="scsi">scsi</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-destructive"
-              onClick={() => setDisks(disks.filter((_, j) => j !== i))}
-            >
-              Remove
-            </Button>
-          </div>
-        ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setDisks([...disks, { name: "", bus: "virtio" }])}
-        >
-          + Add Disk
-        </Button>
-      </Section>
-
-      <Separator />
-
-      {/* Networking */}
-      <Section title="Networking">
-        <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-          <div>
-            <Label className="text-sm font-medium">External Access</Label>
-            <p className="text-sm text-muted-foreground">
-              Expose VM ports outside the cluster
-            </p>
-          </div>
-          <Switch checked={external} onCheckedChange={setExternal} />
-        </div>
-
-        {external && (
-          <div className="space-y-4 pl-1">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Method</Label>
-              <Select value={externalMethod} onValueChange={(v) => { if (v) setExternalMethod(v); }}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PortList">Port List</SelectItem>
-                  <SelectItem value="WholeIP">Whole IP</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {externalMethod === "PortList" && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Ports</Label>
-                <Input
-                  value={externalPorts}
-                  onChange={(e) => setExternalPorts(e.target.value)}
-                  placeholder="22, 80, 443"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Comma-separated list of ports to expose
-                </p>
-              </div>
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        {popularProfiles.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setValue(["instanceProfile"], value)}
+            className={cn(
+              "flex flex-col items-center gap-1.5 rounded-lg border px-3 py-3 transition-all",
+              profile === value
+                ? "border-foreground bg-accent ring-1 ring-foreground"
+                : "hover:border-foreground/30 hover:bg-accent/50"
             )}
-          </div>
-        )}
-      </Section>
-
-      <Separator />
-
-      {/* SSH Keys */}
-      <Section title="Authentication">
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">SSH Public Keys</Label>
-          <Textarea
-            value={sshKeys}
-            onChange={(e) => setSshKeys(e.target.value)}
-            rows={3}
-            className="font-mono text-sm"
-            placeholder="ssh-ed25519 AAAA... user@host"
-          />
-          <p className="text-xs text-muted-foreground">
-            One key per line. These will be added to the VM for SSH access.
-          </p>
-        </div>
-      </Section>
-
-      <Separator />
-
-      {/* Cloud Init */}
-      <Section title="Cloud Init" collapsible>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">User Data</Label>
-          <Textarea
-            value={cloudInit}
-            onChange={(e) => setCloudInit(e.target.value)}
-            rows={6}
-            className="font-mono text-sm"
-            placeholder={"#cloud-config\npackages:\n  - nginx"}
-          />
-          <p className="text-xs text-muted-foreground">
-            Cloud-init configuration in YAML format
-          </p>
-        </div>
-      </Section>
-
-      {/* Error */}
-      {error && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-2">
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Creating..." : "Create VM"}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => router.push(backHref)}
-        >
-          Cancel
-        </Button>
+          >
+            <span className="text-xl">{profileIcon(value)}</span>
+            <span className="text-xs font-medium text-center">{profileLabel(value)}</span>
+          </button>
+        ))}
       </div>
-    </form>
+
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">All images</Label>
+        <Select value={profile} onValueChange={(v) => { if (v) setValue(["instanceProfile"], v); }}>
+          <SelectTrigger className="w-full">
+            <SelectValue>{profileIcon(profile)} {profileLabel(profile)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent side="bottom" alignItemWithTrigger={false} className="max-h-72">
+            {Array.from(groupedProfiles.entries()).map(([category, profiles]) => (
+              <SelectGroup key={category}>
+                <SelectLabel>{category}</SelectLabel>
+                {profiles.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {profileIcon(value)} {profileLabel(value)}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
   );
 }
 
-// Section wrapper with optional collapse
-function Section({
-  title,
-  children,
-  collapsible,
-}: {
-  title: string;
-  children: React.ReactNode;
-  collapsible?: boolean;
-}) {
-  const [open, setOpen] = useState(!collapsible);
+function InstanceTypePicker() {
+  const { getValue, setValue } = useFormContext();
+  const current = (getValue(["instanceType"]) as string) ?? "u1.medium";
 
   return (
-    <div>
-      <button
-        type="button"
-        className={cn(
-          "flex items-center gap-2 mb-4",
-          collapsible && "cursor-pointer hover:text-foreground"
-        )}
-        onClick={() => collapsible && setOpen(!open)}
-      >
-        <h3 className="text-base font-semibold">{title}</h3>
-        {collapsible && (
-          <svg
+    <div className="space-y-2">
+      <label className="text-sm font-medium">Instance Type</label>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {INSTANCE_TYPES.map((it) => (
+          <button
+            key={it.value}
+            type="button"
+            onClick={() => setValue(["instanceType"], it.value)}
             className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform",
-              open && "rotate-90"
+              "flex flex-col rounded-lg border px-3 py-3 text-left transition-all",
+              current === it.value
+                ? "border-foreground bg-accent ring-1 ring-foreground"
+                : "hover:border-foreground/30 hover:bg-accent/50"
             )}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-          </svg>
-        )}
-      </button>
-      {open && <div className="space-y-4">{children}</div>}
+            <span className="text-sm font-medium">{it.label}</span>
+            <span className="text-xs text-muted-foreground mt-0.5">{it.cpu} / {it.ram}</span>
+            <Badge variant="secondary" className="text-[10px] mt-1.5 w-fit">{it.value}</Badge>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExternalConfig({ schema }: { schema: Record<string, unknown> }) {
+  const { getValue, setValue } = useFormContext();
+  const external = (getValue(["external"]) as boolean) ?? false;
+  if (!external) return null;
+
+  const method = (getValue(["externalMethod"]) as string) ?? "PortList";
+  const ports = (getValue(["externalPorts"]) as number[]) ?? [22];
+  const portsStr = ports.join(", ");
+
+  return (
+    <div className="space-y-4 pl-1">
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Method</Label>
+        <Select value={method} onValueChange={(v) => { if (v) setValue(["externalMethod"], v); }}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="PortList">Port List</SelectItem>
+            <SelectItem value="WholeIP">Whole IP</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {method === "PortList" && (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Ports</Label>
+          <Input
+            value={portsStr}
+            onChange={(e) => {
+              const parsed = e.target.value.split(",").map((p) => parseInt(p.trim(), 10)).filter((p) => !isNaN(p));
+              setValue(["externalPorts"], parsed);
+            }}
+            placeholder="22, 80, 443"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SSHKeysSection() {
+  const { getValue, setValue } = useFormContext();
+  const keys = (getValue(["sshKeys"]) as string[]) ?? [];
+  const keysStr = keys.join("\n");
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">SSH Public Keys</Label>
+      <Textarea
+        value={keysStr}
+        onChange={(e) => setValue(["sshKeys"], e.target.value.split("\n").map((k) => k.trim()).filter(Boolean))}
+        rows={3}
+        className="font-mono text-sm"
+        placeholder="ssh-ed25519 AAAA... user@host"
+      />
+      <p className="text-xs text-muted-foreground">One key per line</p>
+    </div>
+  );
+}
+
+function CloudInitSection() {
+  const { getValue, setValue } = useFormContext();
+  const cloudInit = (getValue(["cloudInit"]) as string) ?? "";
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">Cloud Init</Label>
+      <Textarea
+        value={cloudInit}
+        onChange={(e) => setValue(["cloudInit"], e.target.value)}
+        rows={6}
+        className="font-mono text-sm"
+        placeholder={"#cloud-config\npackages:\n  - nginx"}
+      />
+      <p className="text-xs text-muted-foreground">Cloud-init configuration in YAML format</p>
     </div>
   );
 }
