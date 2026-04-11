@@ -189,12 +189,12 @@ registerDetailActions("vminstances", [
 Two route groups with different layouts:
 
 - `(tenant-select)` — no sidebar, used by `/tenants`
-- `(dashboard)` — sidebar + main area, used by `/marketplace`, `/apps/*`
+- `(dashboard)` — sidebar + main area, used by `/platform-apps`, `/apps/*`
 
 ```text
 /                              → redirect to /tenants
 /tenants                       → tenant (namespace) selection, no sidebar
-/marketplace                   → service catalog with tag filters and search
+/platform-apps                   → Platform Apps catalog with tag filters and search
 /apps/[plural]                 → instance list with metrics, table, events
 /apps/[plural]/new             → create form (custom or generic)
 /apps/[plural]/[name]          → instance detail with tabs
@@ -213,7 +213,7 @@ Namespace is carried as `?namespace=xxx` URL search param. Only `tenant-*` names
 
 | CRD | Group | Usage |
 | --- | --- | --- |
-| MarketplacePanel | dashboard.cozystack.io | Marketplace cards, sidebar nav |
+| MarketplacePanel | dashboard.cozystack.io | Platform Apps catalog, sidebar nav |
 | Factory | dashboard.cozystack.io | Detail page structure (not yet fully used) |
 | CustomFormsOverride | dashboard.cozystack.io | Form field overrides (hidden, sort, types) |
 | CustomFormsPrefill | dashboard.cozystack.io | Form default values |

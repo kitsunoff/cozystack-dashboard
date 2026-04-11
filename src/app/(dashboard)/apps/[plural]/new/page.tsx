@@ -55,9 +55,9 @@ function CreateInstanceContent({ plural }: { plural: string }) {
         <Header title="Not Found" />
         <div className="flex-1 overflow-y-auto p-8">
           <p className="text-sm text-muted-foreground">Application not found.</p>
-          <Link href="/marketplace">
+          <Link href="/platform-apps">
             <Button variant="ghost" size="sm" className="mt-2">
-              Back to Marketplace
+              Back to Platform Apps
             </Button>
           </Link>
         </div>
