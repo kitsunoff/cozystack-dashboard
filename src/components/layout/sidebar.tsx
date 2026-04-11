@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
-import { useMarketplacePanels } from "@/lib/k8s/hooks";
+import { useMarketplacePanels, useApplicationDefinitions } from "@/lib/k8s/hooks";
 import { useNamespace } from "@/hooks/use-namespace";
-import { getServiceGroup, getGroupLabel, getGroupOrder } from "@/lib/service-meta";
 import { CozystackLogo } from "@/components/brand/cozystack-logo";
 import { cn } from "@/lib/utils";
+
+const CATEGORY_ORDER = ["IaaS", "PaaS", "NaaS", "Administration"];
 
 interface SidebarGroupProps {
   title: string;
@@ -45,26 +46,40 @@ function SidebarGroup({ title, defaultOpen = true, children }: SidebarGroupProps
 export function Sidebar() {
   const pathname = usePathname();
   const { data: panels } = useMarketplacePanels();
+  const { data: appDefs } = useApplicationDefinitions();
   const { namespace } = useNamespace();
 
   const isMarketplace = pathname === "/marketplace";
 
-  // Group panels by new category (IaaS, PaaS, NaaS, Backups)
-  const groups = new Map<string, NonNullable<typeof panels>>();
-  panels?.forEach((mp) => {
-    const group = getServiceGroup(mp.spec.name);
-    if (!groups.has(group)) groups.set(group, []);
-    groups.get(group)!.push(mp);
-  });
+  // Build plural → category map from ApplicationDefinitions
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (appDefs) {
+      for (const ad of appDefs.items) {
+        const category = ad.spec.dashboard?.category;
+        if (category) {
+          map.set(ad.spec.application.plural, category);
+        }
+      }
+    }
+    return map;
+  }, [appDefs]);
 
-  const order = getGroupOrder();
-  const sortedGroups = Array.from(groups.entries())
-    .filter(([key]) => key !== "other" || groups.get(key)!.length > 0)
-    .sort(([a], [b]) => {
-      const ai = order.indexOf(a);
-      const bi = order.indexOf(b);
+  // Group panels by dynamic category
+  const sortedGroups = useMemo(() => {
+    const groups = new Map<string, NonNullable<typeof panels>>();
+    panels?.forEach((mp) => {
+      const category = categoryMap.get(mp.spec.plural) || "Other";
+      if (!groups.has(category)) groups.set(category, []);
+      groups.get(category)!.push(mp);
+    });
+
+    return Array.from(groups.entries()).sort(([a], [b]) => {
+      const ai = CATEGORY_ORDER.indexOf(a);
+      const bi = CATEGORY_ORDER.indexOf(b);
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
     });
+  }, [panels, categoryMap]);
 
   return (
     <aside className="w-60 shrink-0 flex flex-col bg-card border-r">
@@ -93,9 +108,9 @@ export function Sidebar() {
 
       {/* Collapsible groups */}
       <nav className="flex-1 overflow-y-auto py-2 px-3">
-        {sortedGroups.map(([groupKey, items], idx) => (
-          <div key={groupKey}>
-            <SidebarGroup title={getGroupLabel(groupKey)} defaultOpen>
+        {sortedGroups.map(([category, items], idx) => (
+          <div key={category}>
+            <SidebarGroup title={category} defaultOpen>
               {items.map((mp) => {
                 const href = `/apps/${mp.spec.plural}?namespace=${namespace}`;
                 const isActive = pathname === `/apps/${mp.spec.plural}`;

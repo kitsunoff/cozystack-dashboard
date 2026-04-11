@@ -46,6 +46,14 @@ export function useInstance(
   });
 }
 
+export function useApplicationDefinitions() {
+  return useQuery({
+    queryKey: ["applicationDefinitions"],
+    queryFn: () =>
+      k8sList<ApplicationDefinition>(endpoints.applicationDefinitions()),
+  });
+}
+
 export function useApplicationDefinition(name: string) {
   return useQuery({
     queryKey: ["applicationDefinition", name],
