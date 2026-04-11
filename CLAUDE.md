@@ -63,10 +63,74 @@ Two-tier form system: custom forms take priority, generic OpenAPI form is fallba
 - `vm-disk-form.tsx` — VM Disk with source type picker, preset images, storage size
 - `kubernetes-form.tsx` — Kubernetes cluster with control plane, node groups, addons
 
-To add a custom form:
+### Form Blocks (reusable UI building blocks)
 
-1. Create `src/components/form/custom/my-form.tsx` implementing `CustomFormProps`
-2. Add `registerCustomForm("myplural", MyForm)` in `index.ts`
+`src/components/form/blocks/` — semantic form components that read OpenAPI schema and self-hide when their fields are absent.
+
+Available blocks:
+
+| Block | Schema fields it claims | What it renders |
+| --- | --- | --- |
+| `VersionPicker` | `version` (with enum) | Selectable version buttons |
+| `ResourcesPicker` | `resourcesPreset`, `resources.cpu/memory` | Preset cards + custom CPU/memory toggle |
+| `StoragePicker` | `size`, `storageClass` | Size and storage class inputs |
+| `ReplicasPicker` | `replicas` | Common replica count buttons (1, 2, 3, 5) |
+| `ExternalToggle` | `external` | Boolean toggle for external access |
+| `UsersList` | `users` (additionalProperties) | Dynamic user/password list with add/remove |
+| `BackupConfig` | `backup.enabled`, `backup.schedule`, etc. | Toggle + S3 config fields |
+
+- `WizardShell` — shared form wrapper: provides `FormProvider`, name input, submit/cancel, error display
+- `schemaAt(schema, ["kafka"])` — navigate into nested schema for `basePath` usage
+- All blocks call `initFormValue()` on mount to write schema defaults into FormContext
+
+### How to create a new form block
+
+1. Create `src/components/form/blocks/my-block.tsx`
+2. Accept `FormBlockProps` (`schema`, `basePath?`, `title?`)
+3. Use `schemaHas(schema, "myfield")` to decide visibility — return `null` if field absent
+4. Use `useFormContext()` for `getValue`/`setValue` with `[...basePath, "myfield"]` paths
+5. Call `initFormValue(getValue, setValue, path, default)` in `useEffect` on mount
+6. Export from `src/components/form/blocks/index.ts`
+7. Add tests in `my-block.test.tsx` — test visibility (renders/hides) and interaction
+
+### How to create a form for a new application
+
+1. Get the OpenAPI schema: `curl /api/k8s/apis/cozystack.io/v1alpha1/applicationdefinitions/<name>`
+2. Check which blocks match the schema fields
+3. Create `src/components/form/custom/<name>-form.tsx`:
+
+```tsx
+export function MyForm({ plural, namespace, apiGroup, apiVersion, kind, backHref, openAPISchema }: CustomFormProps) {
+  const schema = openAPISchema ?? {};
+  return (
+    <WizardShell schema={schema} plural={plural} namespace={namespace}
+      apiGroup={apiGroup} apiVersion={apiVersion} kind={kind}
+      backHref={backHref} submitLabel="MyApp">
+      <Separator /><VersionPicker schema={schema} />
+      <Separator /><ResourcesPicker schema={schema} />
+      <Separator /><StoragePicker schema={schema} />
+      <Separator /><ReplicasPicker schema={schema} />
+      <Separator /><ExternalToggle schema={schema} />
+    </WizardShell>
+  );
+}
+```
+
+4. For nested config (like Kafka's `kafka.*` and `zookeeper.*`), use `schemaAt` + `basePath`:
+
+```tsx
+const kafkaSchema = schemaAt(schema, ["kafka"]);
+<ResourcesPicker schema={kafkaSchema} basePath={["kafka"]} title="Kafka Resources" />
+```
+
+5. Register in `src/components/form/custom/index.ts`:
+
+```tsx
+import { MyForm } from "./my-form";
+registerCustomForm("myplurals", MyForm);
+```
+
+6. Blocks self-hide when their schema fields are absent — safe to include extra blocks
 
 **Generic form** (`src/components/form/`):
 
@@ -113,7 +177,7 @@ Namespace is carried as `?namespace=xxx` URL search param. Only `tenant-*` names
 
 ### Layout
 
-- Sidebar (`src/components/layout/sidebar.tsx`) — 240px, logo, grouped nav by tag with colored dots
+- Sidebar (`src/components/layout/sidebar.tsx`) — 240px, Cozystack logo, collapsible groups by ApplicationDefinition category (IaaS/PaaS/NaaS/Administration — dynamic from API)
 - Header (`src/components/layout/header.tsx`) — title, subtitle, optional search, namespace selector, theme toggle
 - No shared `<Header>` in root layout — each page renders its own Header with appropriate props
 
