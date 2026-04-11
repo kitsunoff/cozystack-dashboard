@@ -70,6 +70,17 @@ export async function k8sCreate<T>(
   });
 }
 
+export async function k8sPatch<T>(
+  apiPath: string,
+  body: unknown
+): Promise<T> {
+  return k8sFetch<T>(apiPath, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/merge-patch+json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function k8sDelete(apiPath: string): Promise<void> {
   await k8sFetch(apiPath, { method: "DELETE" });
 }

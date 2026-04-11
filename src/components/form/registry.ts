@@ -13,6 +13,10 @@ export interface CustomFormProps {
   backHref: string;
   /** Raw OpenAPI schema (already parsed JSON) — custom form can use it or ignore */
   openAPISchema?: Record<string, unknown>;
+  /** Instance name when editing (undefined = create mode) */
+  editName?: string;
+  /** Existing spec values when editing */
+  editValues?: Record<string, unknown>;
 }
 
 type FormRegistry = Map<string, ComponentType<CustomFormProps>>;

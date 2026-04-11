@@ -11,10 +11,10 @@ import {
 } from "@/components/form/blocks";
 import type { CustomFormProps } from "../registry";
 
-export function RedisForm({ plural, namespace, apiGroup, apiVersion, kind, backHref, openAPISchema }: CustomFormProps) {
+export function RedisForm({ plural, namespace, apiGroup, apiVersion, kind, backHref, openAPISchema, editName, editValues }: CustomFormProps) {
   const schema = openAPISchema ?? {};
   return (
-    <WizardShell schema={schema} plural={plural} namespace={namespace} apiGroup={apiGroup} apiVersion={apiVersion} kind={kind} backHref={backHref} submitLabel="Redis">
+    <WizardShell schema={schema} plural={plural} namespace={namespace} apiGroup={apiGroup} apiVersion={apiVersion} kind={kind} backHref={backHref} editName={editName} existingValues={editValues} submitLabel="Redis">
       <Separator />
       <VersionPicker schema={schema} />
       <Separator />
