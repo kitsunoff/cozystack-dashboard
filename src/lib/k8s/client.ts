@@ -23,8 +23,10 @@ async function k8sFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     if (response.status === 401) {
-      window.location.href = "/login";
-      throw new K8sError("Unauthorized", 401);
+      throw new K8sError(
+        "Unauthorized — server credentials may have expired. Restart the dashboard or check your kubeconfig.",
+        401
+      );
     }
     const body = await response.json().catch(() => null);
     throw new K8sError(
@@ -39,11 +41,14 @@ async function k8sFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 export async function k8sList<T>(
   apiPath: string,
-  params?: { labelSelector?: string; namespace?: string }
+  params?: { labelSelector?: string; fieldSelector?: string }
 ): Promise<KubeList<T>> {
   const searchParams = new URLSearchParams();
   if (params?.labelSelector) {
     searchParams.set("labelSelector", params.labelSelector);
+  }
+  if (params?.fieldSelector) {
+    searchParams.set("fieldSelector", params.fieldSelector);
   }
   const query = searchParams.toString();
   const url = query ? `${apiPath}?${query}` : apiPath;

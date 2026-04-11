@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { QueryProvider } from "@/components/providers/query-provider";
-import { Sidebar } from "@/components/layout/sidebar";
 import "./globals.css";
 
 const inter = Inter({
@@ -38,14 +37,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <QueryProvider>
-            <div className="flex h-full">
-              <Sidebar />
-              <div className="flex-1 flex flex-col overflow-hidden">
-                {children}
-              </div>
-            </div>
-          </QueryProvider>
+          <QueryProvider>{children}</QueryProvider>
         </ThemeProvider>
       </body>
     </html>

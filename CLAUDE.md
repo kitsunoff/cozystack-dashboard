@@ -92,22 +92,24 @@ To add a custom form:
 - `tabs/yaml-tab.tsx` — YAML representation with copy button
 - `tabs/k8s-*.tsx` — Kubernetes-specific: control plane, node groups, addons
 
-### Mock Data
-
-`src/components/instances/mock-data.ts` — generates realistic mock instances and activity events per resource type. Mocks are used automatically when no real instances exist in the cluster. Each resource type has custom mock specs (K8s has node groups, VMs have profiles, etc.).
-
 ### Routing
 
+Two route groups with different layouts:
+
+- `(tenant-select)` — no sidebar, used by `/tenants`
+- `(dashboard)` — sidebar + main area, used by `/marketplace`, `/apps/*`
+
 ```text
-/                              → redirect to /marketplace
+/                              → redirect to /tenants
+/tenants                       → tenant (namespace) selection, no sidebar
 /marketplace                   → service catalog with tag filters and search
-/apps/[plural]                 → instance list with metrics, table, activity
+/apps/[plural]                 → instance list with metrics, table, events
 /apps/[plural]/new             → create form (custom or generic)
 /apps/[plural]/[name]          → instance detail with tabs
 /api/k8s/[...path]             → proxy to kube-apiserver
 ```
 
-Namespace is carried as `?namespace=xxx` URL search param.
+Namespace is carried as `?namespace=xxx` URL search param. Only `tenant-*` namespaces are shown.
 
 ### Layout
 

@@ -1,4 +1,38 @@
-// Color dots for sidebar items — deterministic by service name
+// New sidebar group structure: IaaS, PaaS, NaaS, Backups
+// Maps service name → new group key
+
+const SERVICE_TO_GROUP: Record<string, string> = {
+  // IaaS
+  VPC: "iaas",
+  Kubernetes: "iaas",
+  "VM Instance": "iaas",
+  "VM Disk": "iaas",
+  Bucket: "iaas",
+
+  // PaaS
+  ClickHouse: "paas",
+  FoundationDB: "paas",
+  Kafka: "paas",
+  MariaDB: "paas",
+  "MongoDB Instance": "paas",
+  NATS: "paas",
+  OpenBAO: "paas",
+  PostgreSQL: "paas",
+  Qdrant: "paas",
+  RabbitMQ: "paas",
+  Redis: "paas",
+
+  // NaaS
+  "HTTP Cache": "naas",
+  "TCP Balancer": "naas",
+  VPN: "naas",
+
+  // Backups
+  Plan: "backups",
+  BackupJob: "backups",
+};
+
+// Color accents used by marketplace app cards
 const SERVICE_COLORS: Record<string, string> = {
   Redis: "#DC2626",
   PostgreSQL: "#336791",
@@ -25,27 +59,17 @@ export function getServiceColor(name: string): string {
   return SERVICE_COLORS[name] ?? "#6B7280";
 }
 
-// Group display names and order
-const GROUP_ORDER = [
-  "database",
-  "cache",
-  "messaging",
-  "compute",
-  "storage",
-  "network",
-  "secrets",
-  "ai",
-];
+export function getServiceGroup(name: string): string {
+  return SERVICE_TO_GROUP[name] ?? "other";
+}
+
+const GROUP_ORDER = ["iaas", "paas", "naas", "backups", "other"];
 
 const GROUP_LABELS: Record<string, string> = {
-  database: "Databases",
-  cache: "Cache",
-  messaging: "Messaging",
-  compute: "Compute",
-  storage: "Storage",
-  network: "Network",
-  secrets: "Secrets",
-  ai: "AI / ML",
+  iaas: "IaaS",
+  paas: "PaaS",
+  naas: "NaaS",
+  backups: "Backups",
   other: "Other",
 };
 

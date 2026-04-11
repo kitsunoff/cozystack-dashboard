@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatAge } from "@/lib/utils";
 import type { AppInstance } from "@/lib/k8s/types";
 
 export interface TabDef {
@@ -85,14 +85,4 @@ export function DetailView({ instance, tabs }: DetailViewProps) {
       </div>
     </div>
   );
-}
-
-function formatAge(timestamp?: string): string {
-  if (!timestamp) return "—";
-  const diff = Date.now() - new Date(timestamp).getTime();
-  const hours = Math.floor(diff / 3600_000);
-  if (hours < 1) return `${Math.floor(diff / 60_000)}m`;
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `${days}d`;
 }

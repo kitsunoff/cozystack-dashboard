@@ -1,17 +1,28 @@
 "use client";
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const NAMESPACE_PARAM = "namespace";
-const DEFAULT_NAMESPACE = "default";
 
 export function useNamespace() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const [hydrated, setHydrated] = useState(false);
 
-  const namespace = searchParams.get(NAMESPACE_PARAM) || DEFAULT_NAMESPACE;
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const namespace = searchParams.get(NAMESPACE_PARAM) || "";
+
+  // Redirect to tenant selection if no namespace is set (only after hydration)
+  useEffect(() => {
+    if (hydrated && !namespace && pathname !== "/tenants") {
+      router.replace("/tenants");
+    }
+  }, [hydrated, namespace, pathname, router]);
 
   const setNamespace = useCallback(
     (ns: string) => {

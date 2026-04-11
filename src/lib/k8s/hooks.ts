@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { k8sList, k8sGet } from "./client";
+import { k8sList, k8sGet, k8sCreate } from "./client";
 import { endpoints } from "./endpoints";
 import type {
   MarketplacePanel,
@@ -12,6 +12,7 @@ import type {
   CustomColumnsOverride,
   ApplicationDefinition,
   AppInstance,
+  K8sEvent,
 } from "./types";
 
 export function useMarketplacePanels() {
@@ -107,8 +108,166 @@ export function useNamespaces() {
       const data = await k8sList<{
         metadata: { name: string };
       }>(endpoints.namespaces());
-      return data.items.map((ns) => ns.metadata.name);
+      return data.items
+        .map((ns) => ns.metadata.name)
+        .filter((name) => name.startsWith("tenant-"));
     },
+  });
+}
+
+export interface NamespaceInfo {
+  name: string;
+  status: string;
+  labels: Record<string, string>;
+  creationTimestamp: string;
+}
+
+export function filterTenantNamespaces(
+  namespaces: NamespaceInfo[]
+): NamespaceInfo[] {
+  return namespaces.filter((ns) => ns.name.startsWith("tenant-"));
+}
+
+export function useNamespaceDetails() {
+  return useQuery({
+    queryKey: ["namespaceDetails"],
+    queryFn: async () => {
+      const data = await k8sList<{
+        metadata: {
+          name: string;
+          labels?: Record<string, string>;
+          creationTimestamp?: string;
+        };
+        status?: { phase?: string };
+      }>(endpoints.namespaces());
+      return data.items.map(
+        (ns): NamespaceInfo => ({
+          name: ns.metadata.name,
+          status: ns.status?.phase || "Active",
+          labels: ns.metadata.labels || {},
+          creationTimestamp: ns.metadata.creationTimestamp || "",
+        })
+      );
+    },
+  });
+}
+
+// --- RBAC: SelfSubjectRulesReview ---
+
+export type OpType = "read" | "write" | "delete" | "*";
+
+export interface ResourcePermission {
+  resource: string;
+  opType: OpType;
+}
+
+export interface TenantPermissions {
+  wildcardOp: OpType | null;
+  resources: ResourcePermission[];
+}
+
+interface SelfSubjectRulesReviewResponse {
+  status: {
+    resourceRules: Array<{
+      verbs: string[];
+      apiGroups: string[];
+      resources: string[];
+    }>;
+  };
+}
+
+function verbsToOpType(verbs: string[]): OpType {
+  if (verbs.includes("*")) return "*";
+  if (verbs.includes("delete")) return "delete";
+  if (verbs.some((v) => ["create", "update", "patch"].includes(v)))
+    return "write";
+  return "read";
+}
+
+const IGNORED_RESOURCES = new Set([
+  "selfsubjectaccessreviews",
+  "selfsubjectrulesreviews",
+  "localsubjectaccessreviews",
+  "tokenreviews",
+  "subjectaccessreviews",
+]);
+
+const OP_PRIORITY: Record<OpType, number> = { read: 0, write: 1, delete: 2, "*": 3 };
+
+function higherOp(a: OpType, b: OpType): OpType {
+  return OP_PRIORITY[a] >= OP_PRIORITY[b] ? a : b;
+}
+
+function parseRulesReview(
+  response: SelfSubjectRulesReviewResponse
+): TenantPermissions {
+  const resourceMap = new Map<string, OpType>();
+  let wildcardOp: OpType | null = null;
+
+  for (const rule of response.status.resourceRules) {
+    const opType = verbsToOpType(rule.verbs);
+    for (const resource of rule.resources) {
+      if (IGNORED_RESOURCES.has(resource)) continue;
+      if (resource === "*") {
+        wildcardOp = wildcardOp ? higherOp(wildcardOp, opType) : opType;
+        continue;
+      }
+      const existing = resourceMap.get(resource);
+      resourceMap.set(resource, existing ? higherOp(existing, opType) : opType);
+    }
+  }
+
+  if (wildcardOp) {
+    for (const [resource, existing] of resourceMap) {
+      resourceMap.set(resource, higherOp(existing, wildcardOp));
+    }
+  }
+
+  const resources = Array.from(resourceMap.entries())
+    .map(([resource, opType]) => ({ resource, opType }))
+    .sort((a, b) => a.resource.localeCompare(b.resource));
+
+  return { wildcardOp, resources };
+}
+
+export function useTenantPermissions(namespace: string) {
+  return useQuery({
+    queryKey: ["tenantPermissions", namespace],
+    queryFn: async () => {
+      const review = await k8sCreate<SelfSubjectRulesReviewResponse>(
+        "/apis/authorization.k8s.io/v1/selfsubjectrulesreviews",
+        {
+          apiVersion: "authorization.k8s.io/v1",
+          kind: "SelfSubjectRulesReview",
+          spec: { namespace },
+        }
+      );
+      return parseRulesReview(review);
+    },
+    enabled: !!namespace,
+    staleTime: 5 * 60_000,
+  });
+}
+
+// --- K8s Events ---
+
+export function useEvents(namespace: string, name?: string) {
+  const fieldParts: string[] = [];
+  if (name) fieldParts.push(`involvedObject.name=${name}`);
+
+  const fieldSelector = fieldParts.length > 0 ? fieldParts.join(",") : undefined;
+
+  return useQuery({
+    queryKey: ["events", namespace, name ?? ""],
+    queryFn: () =>
+      k8sList<K8sEvent>(endpoints.events(namespace), { fieldSelector }),
+    enabled: !!namespace,
+    select: (data) =>
+      data.items.sort((a, b) => {
+        const ta = a.lastTimestamp || a.eventTime || a.metadata.creationTimestamp || "";
+        const tb = b.lastTimestamp || b.eventTime || b.metadata.creationTimestamp || "";
+        return tb.localeCompare(ta); // newest first
+      }),
   });
 }
 
