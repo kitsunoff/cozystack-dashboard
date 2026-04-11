@@ -259,23 +259,48 @@ export function useTenantPermissions(namespace: string) {
 
 // --- K8s Events ---
 
-export function useEvents(namespace: string, name?: string) {
-  const fieldParts: string[] = [];
-  if (name) fieldParts.push(`involvedObject.name=${name}`);
-
-  const fieldSelector = fieldParts.length > 0 ? fieldParts.join(",") : undefined;
-
+/**
+ * Fetch events in a namespace, optionally filtered by instance names.
+ *
+ * @param namespace - K8s namespace
+ * @param instanceNames - instance names to match events against
+ * @param releasePrefix - Cozystack release prefix from ApplicationDefinition
+ *   (e.g. "vm-instance-"). When set, events are matched by prefix:
+ *   involvedObject.name starts with `${releasePrefix}${instanceName}`.
+ *   When empty, events are matched by exact involvedObject.name.
+ */
+export function useEvents(
+  namespace: string,
+  instanceNames?: string[],
+  releasePrefix?: string
+) {
   return useQuery({
-    queryKey: ["events", namespace, name ?? ""],
-    queryFn: () =>
-      k8sList<K8sEvent>(endpoints.events(namespace), { fieldSelector }),
+    queryKey: ["events", namespace],
+    queryFn: () => k8sList<K8sEvent>(endpoints.events(namespace)),
     enabled: !!namespace,
-    select: (data) =>
-      data.items.sort((a, b) => {
+    select: (data) => {
+      let filtered = data.items;
+
+      if (instanceNames && instanceNames.length > 0) {
+        if (releasePrefix) {
+          // Prefix match: child resources named {prefix}{instanceName}-xxx
+          const prefixes = instanceNames.map((n) => `${releasePrefix}${n}`);
+          filtered = filtered.filter((e) =>
+            prefixes.some((p) => e.involvedObject.name.startsWith(p))
+          );
+        } else {
+          // Exact match fallback
+          const nameSet = new Set(instanceNames);
+          filtered = filtered.filter((e) => nameSet.has(e.involvedObject.name));
+        }
+      }
+
+      return filtered.sort((a, b) => {
         const ta = a.lastTimestamp || a.eventTime || a.metadata.creationTimestamp || "";
         const tb = b.lastTimestamp || b.eventTime || b.metadata.creationTimestamp || "";
-        return tb.localeCompare(ta); // newest first
-      }),
+        return tb.localeCompare(ta);
+      });
+    },
   });
 }
 

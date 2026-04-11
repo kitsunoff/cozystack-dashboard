@@ -196,6 +196,9 @@ export interface ApplicationDefinition {
       name?: string;
       keysOrder?: string[][];
     };
+    release?: {
+      prefix?: string;
+    };
   };
 }
 

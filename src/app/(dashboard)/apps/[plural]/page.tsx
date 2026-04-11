@@ -1,7 +1,12 @@
 "use client";
 
 import { use, Suspense, useMemo } from "react";
-import { useMarketplacePanels, useInstances, useEvents } from "@/lib/k8s/hooks";
+import {
+  useMarketplacePanels,
+  useInstances,
+  useApplicationDefinition,
+  useEvents,
+} from "@/lib/k8s/hooks";
 import { useNamespace } from "@/hooks/use-namespace";
 import { Header } from "@/components/layout/header";
 import { InstanceTable } from "@/components/instances/instance-table";
@@ -18,22 +23,22 @@ function InstancesContent({ plural }: { plural: string }) {
     namespace
   );
 
-  const { data: events } = useEvents(namespace);
-
   const panel = panels?.find((mp) => mp.spec.plural === plural);
   const appName = panel?.spec.name ?? plural;
+  const appDefName = panel?.metadata.name ?? "";
+  const { data: appDef } = useApplicationDefinition(appDefName);
+
   const instances = instanceList?.items ?? [];
   const isLoading = panelsLoading || instancesLoading;
 
-  // Filter events to only those related to our instances
   const instanceNames = useMemo(
-    () => new Set(instances.map((i) => i.metadata.name)),
+    () => instances.map((i) => i.metadata.name),
     [instances]
   );
-  const filteredEvents = useMemo(
-    () => (events ?? []).filter((e) => instanceNames.has(e.involvedObject.name)),
-    [events, instanceNames]
-  );
+
+  const releasePrefix = appDef?.spec.release?.prefix ?? "";
+
+  const { data: events } = useEvents(namespace, instanceNames, releasePrefix);
 
   return (
     <>
@@ -69,13 +74,14 @@ function InstancesContent({ plural }: { plural: string }) {
                 appName={appName}
               />
             </div>
+
             {/* Activity */}
             <div>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
                 Recent Events
               </h2>
               <div className="rounded-xl border bg-card">
-                <ActivityFeed events={filteredEvents} />
+                <ActivityFeed events={events ?? []} />
               </div>
             </div>
           </div>
