@@ -3,7 +3,6 @@
  * Import this file once in the app to activate all registrations.
  */
 
-import React from "react";
 import type { ComponentType } from "react";
 import { registerDetailTabs, registerDetailActions, registerColumns, registerStatusRenderer } from "./index";
 import type { ResourceComponentProps, ColumnDef } from "./types";
@@ -18,40 +17,33 @@ import { formatAge } from "@/lib/utils";
 const asTab = (C: ComponentType<{ instance: AppInstance }>) =>
   C as ComponentType<ResourceComponentProps>;
 
-function badge(text: string, variant: "secondary" | "outline" = "secondary", mono = false) {
-  return React.createElement("span", {
-    className: `inline-flex items-center rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium ${
-      variant === "secondary"
-        ? "bg-secondary text-secondary-foreground"
-        : "border-border text-foreground"
-    } ${mono ? "font-mono" : ""}`,
-  }, text);
+function StatusDot({ color, pulse }: { color: string; pulse?: boolean }) {
+  return <span className={`h-2 w-2 rounded-full ${color} ${pulse ? "animate-pulse" : ""}`} />;
 }
 
-function muted(text: string) {
-  return React.createElement("span", { className: "text-sm text-muted-foreground" }, text);
+function StatusLabel({ color, children }: { color: string; children: string }) {
+  return <span className={`text-sm ${color}`}>{children}</span>;
 }
 
-function mono(text: string) {
-  return React.createElement("span", { className: "text-sm font-mono" }, text);
-}
-
-function tabular(text: string) {
-  return React.createElement("span", { className: "text-sm tabular-nums" }, text);
+function StatusRow({ dotColor, textColor, label, pulse }: { dotColor: string; textColor: string; label: string; pulse?: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <StatusDot color={dotColor} pulse={pulse} />
+      <StatusLabel color={textColor}>{label}</StatusLabel>
+    </div>
+  );
 }
 
 // --- Status renderers ---
 
 function defaultStatus(i: AppInstance) {
   const ready = i.status?.conditions?.find((c) => c.type === "Ready");
-  if (!ready) return badge("Unknown", "secondary");
+  if (!ready) {
+    return <span className="inline-flex items-center rounded-4xl bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium">Unknown</span>;
+  }
   return ready.status === "True"
-    ? React.createElement("div", { className: "flex items-center gap-1.5" },
-        React.createElement("span", { className: "h-2 w-2 rounded-full bg-emerald-500" }),
-        React.createElement("span", { className: "text-sm text-emerald-700 dark:text-emerald-400" }, "Ready"))
-    : React.createElement("div", { className: "flex items-center gap-1.5" },
-        React.createElement("span", { className: "h-2 w-2 rounded-full bg-amber-500" }),
-        React.createElement("span", { className: "text-sm text-amber-700 dark:text-amber-400" }, "Not Ready"));
+    ? <StatusRow dotColor="bg-emerald-500" textColor="text-emerald-700 dark:text-emerald-400" label="Ready" />
+    : <StatusRow dotColor="bg-amber-500" textColor="text-amber-700 dark:text-amber-400" label="Not Ready" />;
 }
 
 function vmStatus(i: AppInstance) {
@@ -59,23 +51,15 @@ function vmStatus(i: AppInstance) {
   const strategy = i.spec.runStrategy as string | undefined;
 
   if (strategy === "Halted") {
-    return React.createElement("div", { className: "flex items-center gap-1.5" },
-      React.createElement("span", { className: "h-2 w-2 rounded-full bg-gray-400" }),
-      React.createElement("span", { className: "text-sm text-muted-foreground" }, "Stopped"));
+    return <StatusRow dotColor="bg-gray-400" textColor="text-muted-foreground" label="Stopped" />;
   }
   if (ready?.status === "True") {
-    return React.createElement("div", { className: "flex items-center gap-1.5" },
-      React.createElement("span", { className: "h-2 w-2 rounded-full bg-emerald-500" }),
-      React.createElement("span", { className: "text-sm text-emerald-700 dark:text-emerald-400" }, "Running"));
+    return <StatusRow dotColor="bg-emerald-500" textColor="text-emerald-700 dark:text-emerald-400" label="Running" />;
   }
   if (ready?.reason === "UpgradeSucceeded" || ready?.reason === "InstallSucceeded") {
-    return React.createElement("div", { className: "flex items-center gap-1.5" },
-      React.createElement("span", { className: "h-2 w-2 rounded-full bg-blue-500 animate-pulse" }),
-      React.createElement("span", { className: "text-sm text-blue-700 dark:text-blue-400" }, "Starting"));
+    return <StatusRow dotColor="bg-blue-500" textColor="text-blue-700 dark:text-blue-400" label="Starting" pulse />;
   }
-  return React.createElement("div", { className: "flex items-center gap-1.5" },
-    React.createElement("span", { className: "h-2 w-2 rounded-full bg-amber-500" }),
-    React.createElement("span", { className: "text-sm text-amber-700 dark:text-amber-400" }, ready?.reason ?? "Not Ready"));
+  return <StatusRow dotColor="bg-amber-500" textColor="text-amber-700 dark:text-amber-400" label={ready?.reason ?? "Not Ready"} />;
 }
 
 // --- Common column fragments ---
@@ -83,7 +67,7 @@ function vmStatus(i: AppInstance) {
 const ageColumn: ColumnDef = {
   key: "age",
   label: "Age",
-  render: (i) => muted(formatAge(i.metadata.creationTimestamp)),
+  render: (i) => <span className="text-sm text-muted-foreground">{formatAge(i.metadata.creationTimestamp)}</span>,
 };
 
 // --- K8s tabs ---
@@ -106,14 +90,18 @@ registerDetailTabs("kuberneteses", [
 
 registerColumns("kuberneteses", [
   { key: "status", label: "Status", render: defaultStatus },
-  { key: "version", label: "Version", render: (i) => badge(String(i.spec.version ?? "—"), "secondary", true) },
+  { key: "version", label: "Version", render: (i) => (
+    <span className="inline-flex items-center rounded-4xl bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium font-mono">
+      {String(i.spec.version ?? "—")}
+    </span>
+  )},
   { key: "cp", label: "Control Plane", render: (i) => {
     const cp = i.spec.controlPlane as { replicas?: number } | undefined;
-    return tabular(`${cp?.replicas ?? "—"} replicas`);
+    return <span className="text-sm tabular-nums">{cp?.replicas ?? "—"} replicas</span>;
   }},
   { key: "nodes", label: "Node Groups", render: (i) => {
-    const ng = i.spec.nodeGroups as Record<string, { maxReplicas?: number }> | undefined;
-    return tabular(ng ? `${Object.keys(ng).length} groups` : "—");
+    const ng = i.spec.nodeGroups as Record<string, unknown> | undefined;
+    return <span className="text-sm tabular-nums">{ng ? `${Object.keys(ng).length} groups` : "—"}</span>;
   }},
   ageColumn,
 ]);
@@ -122,9 +110,13 @@ registerColumns("kuberneteses", [
 
 registerColumns("vminstances", [
   { key: "status", label: "Status", render: vmStatus },
-  { key: "profile", label: "OS", render: (i) => badge(String(i.spec.instanceProfile ?? "—")) },
-  { key: "type", label: "Type", render: (i) => mono(String(i.spec.instanceType ?? "—")) },
-  { key: "strategy", label: "Strategy", render: (i) => muted(String(i.spec.runStrategy ?? "—")) },
+  { key: "profile", label: "OS", render: (i) => (
+    <span className="inline-flex items-center rounded-4xl bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium">
+      {String(i.spec.instanceProfile ?? "—")}
+    </span>
+  )},
+  { key: "type", label: "Type", render: (i) => <span className="text-sm font-mono">{String(i.spec.instanceType ?? "—")}</span> },
+  { key: "strategy", label: "Strategy", render: (i) => <span className="text-sm text-muted-foreground">{String(i.spec.runStrategy ?? "—")}</span> },
   ageColumn,
 ]);
 
@@ -134,11 +126,15 @@ registerColumns("vmdisks", [
   { key: "status", label: "Status", render: defaultStatus },
   { key: "source", label: "Source", render: (i) => {
     const src = i.spec.source as { image?: { name: string }; http?: { url: string } } | undefined;
-    if (src?.image) return badge(src.image.name);
-    if (src?.http) return mono(src.http.url);
-    return muted("empty");
+    if (src?.image) return (
+      <span className="inline-flex items-center rounded-4xl bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium">
+        {src.image.name}
+      </span>
+    );
+    if (src?.http) return <span className="text-sm font-mono">{src.http.url}</span>;
+    return <span className="text-sm text-muted-foreground">empty</span>;
   }},
-  { key: "storage", label: "Size", render: (i) => tabular(String(i.spec.storage ?? "—")) },
+  { key: "storage", label: "Size", render: (i) => <span className="text-sm tabular-nums">{String(i.spec.storage ?? "—")}</span> },
   ageColumn,
 ]);
 
