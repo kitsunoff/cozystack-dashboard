@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WizardShell } from "./wizard-shell";
 
 vi.mock("next/navigation", () => ({
@@ -7,6 +8,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/apps/postgreses/new",
   useSearchParams: () => new URLSearchParams("namespace=tenant-root"),
 }));
+
+const queryClient = new QueryClient();
+
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
 
 const POSTGRES_SCHEMA = {
   properties: {
@@ -26,18 +33,20 @@ const POSTGRES_SCHEMA = {
 describe("WizardShell", () => {
   it("renders name input and submit button", () => {
     render(
-      <WizardShell
-        schema={POSTGRES_SCHEMA}
-        plural="postgreses"
-        namespace="tenant-root"
-        apiGroup="apps.cozystack.io"
-        apiVersion="v1alpha1"
-        kind="Postgres"
-        backHref="/apps/postgreses"
-        submitLabel="PostgreSQL"
-      >
-        <div>child content</div>
-      </WizardShell>
+      <Wrapper>
+        <WizardShell
+          schema={POSTGRES_SCHEMA}
+          plural="postgreses"
+          namespace="tenant-root"
+          apiGroup="apps.cozystack.io"
+          apiVersion="v1alpha1"
+          kind="Postgres"
+          backHref="/apps/postgreses"
+          submitLabel="PostgreSQL"
+        >
+          <div>child content</div>
+        </WizardShell>
+      </Wrapper>
     );
 
     expect(screen.getByPlaceholderText("my-instance")).toBeInTheDocument();
