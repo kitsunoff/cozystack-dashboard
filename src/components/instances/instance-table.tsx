@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import {
   Table,
@@ -226,11 +226,22 @@ export function InstanceTable({
 
 function RowActions() {
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const handleOpen = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.right - 144 }); // 144 = w-36
+    }
+    setOpen(!open);
+  };
 
   return (
-    <div className="relative">
+    <>
       <button
-        onClick={() => setOpen(!open)}
+        ref={buttonRef}
+        onClick={handleOpen}
         className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 rounded-md hover:bg-accent flex items-center justify-center"
       >
         <svg className="h-4 w-4 text-muted-foreground" fill="currentColor" viewBox="0 0 16 16">
@@ -242,7 +253,10 @@ function RowActions() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-8 z-50 w-36 rounded-lg border bg-card shadow-md py-1">
+          <div
+            className="fixed z-50 w-36 rounded-lg border bg-card shadow-md py-1"
+            style={{ top: pos.top, left: pos.left }}
+          >
             <button className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors">
               View YAML
             </button>
@@ -256,7 +270,7 @@ function RowActions() {
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }
 
