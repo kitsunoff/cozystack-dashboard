@@ -295,11 +295,34 @@ export function useEvents(
         }
       }
 
-      return filtered.sort((a, b) => {
-        const ta = a.lastTimestamp || a.eventTime || a.metadata.creationTimestamp || "";
-        const tb = b.lastTimestamp || b.eventTime || b.metadata.creationTimestamp || "";
-        return tb.localeCompare(ta);
-      });
+      // Deduplicate by reason+message+involvedObject — keep latest, sum counts
+      const deduped = new Map<string, K8sEvent>();
+      for (const e of filtered) {
+        const key = `${e.involvedObject.name}::${e.reason}::${e.message}`;
+        const existing = deduped.get(key);
+        if (existing) {
+          const existingTs = existing.lastTimestamp || existing.eventTime || existing.metadata.creationTimestamp || "";
+          const newTs = e.lastTimestamp || e.eventTime || e.metadata.creationTimestamp || "";
+          if (newTs > existingTs) {
+            deduped.set(key, {
+              ...e,
+              count: (existing.count ?? 1) + (e.count ?? 1),
+            });
+          } else {
+            existing.count = (existing.count ?? 1) + (e.count ?? 1);
+          }
+        } else {
+          deduped.set(key, { ...e });
+        }
+      }
+
+      return Array.from(deduped.values())
+        .sort((a, b) => {
+          const ta = a.lastTimestamp || a.eventTime || a.metadata.creationTimestamp || "";
+          const tb = b.lastTimestamp || b.eventTime || b.metadata.creationTimestamp || "";
+          return tb.localeCompare(ta);
+        })
+        .slice(0, 30);
     },
   });
 }
