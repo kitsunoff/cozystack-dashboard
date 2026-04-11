@@ -39,6 +39,9 @@ export interface ColumnDef {
   render: (instance: AppInstance) => React.ReactNode;
 }
 
+/** Status renderer — returns ReactNode for instance status display */
+export type StatusRenderer = (instance: AppInstance) => React.ReactNode;
+
 /** List section — custom component between table and events */
 export interface ListSectionDef {
   key: string;

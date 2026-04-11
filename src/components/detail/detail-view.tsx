@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn, formatAge } from "@/lib/utils";
 import type { AppInstance } from "@/lib/k8s/types";
 import type { TabDef, ActionDef } from "@/components/registry";
+import { getStatusRenderer } from "@/components/registry";
 
 interface DetailViewProps {
   instance: AppInstance;
@@ -24,9 +25,7 @@ export function DetailView({ instance, plural, namespace, tabs, actions }: Detai
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const ready = instance.status?.conditions?.find((c) => c.type === "Ready");
-  const isReady = ready?.status === "True";
-
+  const customStatus = getStatusRenderer(plural);
   const ActiveComponent = tabs.find((t) => t.key === activeTab)?.component;
 
   const handleAction = async (action: ActionDef) => {
@@ -51,19 +50,7 @@ export function DetailView({ instance, plural, namespace, tabs, actions }: Detai
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-semibold">{instance.metadata.name}</h2>
-            {isReady ? (
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Ready</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">
-                  {ready?.reason ?? "Not Ready"}
-                </span>
-              </div>
-            )}
+            {customStatus ? customStatus(instance) : <DefaultStatus instance={instance} />}
           </div>
           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
             <span>{instance.metadata.namespace}</span>
@@ -125,6 +112,25 @@ export function DetailView({ instance, plural, namespace, tabs, actions }: Detai
           <ActiveComponent instance={instance} plural={plural} namespace={namespace} />
         )}
       </div>
+    </div>
+  );
+}
+
+function DefaultStatus({ instance }: { instance: AppInstance }) {
+  const ready = instance.status?.conditions?.find((c) => c.type === "Ready");
+  const isReady = ready?.status === "True";
+
+  return isReady ? (
+    <div className="flex items-center gap-1.5">
+      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+      <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Ready</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-1.5">
+      <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+      <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">
+        {ready?.reason ?? "Not Ready"}
+      </span>
     </div>
   );
 }

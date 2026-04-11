@@ -5,7 +5,7 @@
 
 import React from "react";
 import type { ComponentType } from "react";
-import { registerDetailTabs, registerDetailActions, registerColumns } from "./index";
+import { registerDetailTabs, registerDetailActions, registerColumns, registerStatusRenderer } from "./index";
 import type { ResourceComponentProps, ColumnDef } from "./types";
 import type { AppInstance } from "@/lib/k8s/types";
 import { k8sPatch } from "@/lib/k8s/client";
@@ -141,6 +141,10 @@ registerColumns("vmdisks", [
   { key: "storage", label: "Size", render: (i) => tabular(String(i.spec.storage ?? "—")) },
   ageColumn,
 ]);
+
+// --- Status renderers ---
+
+registerStatusRenderer("vminstances", vmStatus);
 
 // --- VM Instance actions ---
 
