@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AppInstance } from "@/lib/k8s/types";
+import { k8sDelete } from "@/lib/k8s/client";
+import { endpoints } from "@/lib/k8s/endpoints";
 import { formatAge } from "@/lib/utils";
 
 interface ColumnDef {
@@ -263,8 +265,6 @@ function RowActions({
     }
     setDeleting(true);
     try {
-      const { k8sDelete } = await import("@/lib/k8s/client");
-      const { endpoints } = await import("@/lib/k8s/endpoints");
       await k8sDelete(endpoints.instance(plural, namespace, name));
       await queryClient.invalidateQueries({ queryKey: ["instances", plural] });
       setOpen(false);
