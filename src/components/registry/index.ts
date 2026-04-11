@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
-import type { TabDef, ActionDef, ListSectionDef, ColumnDef, ResourceComponentProps } from "./types";
+import type { TabDef, ActionDef, ListSectionDef, ColumnDef, StatusRenderer, ResourceComponentProps } from "./types";
 
-export type { TabDef, ActionDef, ListSectionDef, ColumnDef, ResourceComponentProps, ListComponentProps } from "./types";
+export type { TabDef, ActionDef, ListSectionDef, ColumnDef, StatusRenderer, ResourceComponentProps, ListComponentProps } from "./types";
 
 // --- Detail Tabs ---
 
@@ -61,6 +61,18 @@ export function registerColumns(plural: string, columns: ColumnDef[]): void {
 
 export function getColumns(plural: string): ColumnDef[] | undefined {
   return columnRegistry.get(plural);
+}
+
+// --- Status Renderer ---
+
+const statusRegistry = new Map<string, StatusRenderer>();
+
+export function registerStatusRenderer(plural: string, renderer: StatusRenderer): void {
+  statusRegistry.set(plural, renderer);
+}
+
+export function getStatusRenderer(plural: string): StatusRenderer | undefined {
+  return statusRegistry.get(plural);
 }
 
 // --- Default tabs ---
