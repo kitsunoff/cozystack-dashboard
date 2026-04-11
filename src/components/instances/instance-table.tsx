@@ -19,101 +19,45 @@ import type { AppInstance } from "@/lib/k8s/types";
 import { k8sDelete } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 import { formatAge } from "@/lib/utils";
+import { getColumns } from "@/components/registry";
+import type { ColumnDef } from "@/components/registry";
 
-interface ColumnDef {
-  key: string;
-  label: string;
-  render: (instance: AppInstance) => React.ReactNode;
-}
+// Activate registrations
+import "@/components/registry/registrations";
 
-// Per-resource column definitions
-function getColumns(plural: string): ColumnDef[] {
-  const base: ColumnDef[] = [
-    {
-      key: "status",
-      label: "Status",
-      render: (i) => <StatusBadge conditions={i.status?.conditions} />,
-    },
-  ];
+// --- Default columns for unregistered resources ---
 
-  const age: ColumnDef = {
-    key: "age",
-    label: "Age",
-    render: (i) => (
-      <span className="text-sm text-muted-foreground">
-        {formatAge(i.metadata.creationTimestamp)}
-      </span>
-    ),
-  };
-
-  switch (plural) {
-    case "kuberneteses":
-      return [
-        ...base,
-        { key: "version", label: "Version", render: (i) => <Badge variant="secondary" className="text-xs font-mono">{String(i.spec.version ?? "—")}</Badge> },
-        { key: "cp", label: "Control Plane", render: (i) => {
-          const cp = i.spec.controlPlane as { replicas?: number } | undefined;
-          return <span className="text-sm tabular-nums">{cp?.replicas ?? "—"} replicas</span>;
-        }},
-        { key: "nodes", label: "Node Groups", render: (i) => {
-          const ng = i.spec.nodeGroups as Record<string, { instanceType?: string; maxReplicas?: number }> | undefined;
-          if (!ng) return <span className="text-sm text-muted-foreground">—</span>;
-          const groups = Object.entries(ng);
-          return (
-            <div className="flex gap-1.5">
-              {groups.map(([name, g]) => (
-                <Badge key={name} variant="outline" className="text-xs font-normal">
-                  {name}: {g.instanceType ?? "?"} (max {g.maxReplicas ?? "?"})
-                </Badge>
-              ))}
-            </div>
-          );
-        }},
-        { key: "host", label: "Host", render: (i) => {
-          const host = i.spec.host as string | undefined;
-          return host ? <span className="text-sm font-mono text-muted-foreground">{host}</span> : <span className="text-sm text-muted-foreground/50">auto</span>;
-        }},
-        age,
-      ];
-
-    case "vminstances":
-      return [
-        ...base,
-        { key: "profile", label: "OS", render: (i) => <Badge variant="secondary" className="text-xs">{String(i.spec.instanceProfile ?? "—")}</Badge> },
-        { key: "type", label: "Type", render: (i) => <span className="text-sm font-mono">{String(i.spec.instanceType ?? "—")}</span> },
-        { key: "strategy", label: "Strategy", render: (i) => <span className="text-sm text-muted-foreground">{String(i.spec.runStrategy ?? "—")}</span> },
-        { key: "external", label: "External", render: (i) => {
-          if (!i.spec.external) return <span className="text-sm text-muted-foreground/50">off</span>;
-          const ports = i.spec.externalPorts as number[] | undefined;
-          return <Badge variant="outline" className="text-xs font-normal">{ports?.join(", ") ?? "all"}</Badge>;
-        }},
-        age,
-      ];
-
-    case "vmdisks":
-      return [
-        ...base,
-        { key: "source", label: "Source", render: (i) => {
-          const src = i.spec.source as { image?: { name: string }; http?: { url: string } } | undefined;
-          if (src?.image) return <Badge variant="secondary" className="text-xs">{src.image.name}</Badge>;
-          if (src?.http) return <span className="text-sm font-mono text-muted-foreground truncate max-w-[200px] inline-block">{src.http.url}</span>;
-          return <span className="text-sm text-muted-foreground/50">empty</span>;
-        }},
-        { key: "storage", label: "Size", render: (i) => <span className="text-sm tabular-nums">{String(i.spec.storage ?? "—")}</span> },
-        { key: "optical", label: "Type", render: (i) => i.spec.optical ? <Badge variant="outline" className="text-xs">optical</Badge> : <span className="text-sm text-muted-foreground">disk</span> },
-        age,
-      ];
-
-    default:
-      return [
-        ...base,
-        { key: "replicas", label: "Replicas", render: (i) => <span className="text-sm tabular-nums">{String(i.spec.replicas ?? "—")}</span> },
-        { key: "preset", label: "Preset", render: (i) => i.spec.resourcesPreset ? <Badge variant="secondary" className="text-xs font-normal">{String(i.spec.resourcesPreset)}</Badge> : <span className="text-sm text-muted-foreground">—</span> },
-        { key: "storage", label: "Storage", render: (i) => <span className="text-sm tabular-nums text-muted-foreground">{String(i.spec.size ?? "—")}</span> },
-        age,
-      ];
+function defaultStatusRender(i: AppInstance) {
+  const ready = i.status?.conditions?.find((c) => c.type === "Ready");
+  if (!ready) {
+    return <Badge variant="secondary" className="text-xs">Unknown</Badge>;
   }
+  return ready.status === "True" ? (
+    <div className="flex items-center gap-1.5">
+      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+      <span className="text-sm text-emerald-700 dark:text-emerald-400">Ready</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-1.5">
+      <span className="h-2 w-2 rounded-full bg-amber-500" />
+      <span className="text-sm text-amber-700 dark:text-amber-400">Not Ready</span>
+    </div>
+  );
 }
+
+const defaultColumns: ColumnDef[] = [
+  { key: "status", label: "Status", render: defaultStatusRender },
+  { key: "replicas", label: "Replicas", render: (i) => <span className="text-sm tabular-nums">{String(i.spec.replicas ?? "—")}</span> },
+  { key: "preset", label: "Preset", render: (i) => i.spec.resourcesPreset ? <Badge variant="secondary" className="text-xs font-normal">{String(i.spec.resourcesPreset)}</Badge> : <span className="text-sm text-muted-foreground">—</span> },
+  { key: "storage", label: "Storage", render: (i) => <span className="text-sm tabular-nums text-muted-foreground">{String(i.spec.size ?? "—")}</span> },
+  { key: "age", label: "Age", render: (i) => <span className="text-sm text-muted-foreground">{formatAge(i.metadata.creationTimestamp)}</span> },
+];
+
+function resolveColumns(plural: string): ColumnDef[] {
+  return getColumns(plural) ?? defaultColumns;
+}
+
+// --- Table ---
 
 interface InstanceTableProps {
   instances: AppInstance[] | undefined;
@@ -131,7 +75,7 @@ export function InstanceTable({
   appName,
 }: InstanceTableProps) {
   const [search, setSearch] = useState("");
-  const columns = getColumns(plural);
+  const columns = resolveColumns(plural);
 
   if (isLoading) {
     return (
@@ -176,14 +120,17 @@ export function InstanceTable({
           stroke="currentColor"
           strokeWidth={2}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+          />
         </svg>
         <input
-          type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter instances..."
-          className="h-9 w-full max-w-xs rounded-md border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+          placeholder="Search instances..."
+          className="h-9 w-full rounded-lg border bg-transparent pl-9 pr-3 text-sm outline-none transition-colors focus:border-ring"
         />
       </div>
 
@@ -232,6 +179,8 @@ export function InstanceTable({
   );
 }
 
+// --- Row Actions ---
+
 function RowActions({
   plural,
   namespace,
@@ -252,7 +201,7 @@ function RowActions({
   const handleOpen = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.right - 144 });
+      setPos({ top: rect.bottom + 4, left: rect.right - 176 });
     }
     setOpen(!open);
     setConfirmDelete(false);
@@ -323,27 +272,5 @@ function RowActions({
         </>
       )}
     </>
-  );
-}
-
-function StatusBadge({
-  conditions,
-}: {
-  conditions?: { type: string; status: string }[];
-}) {
-  const ready = conditions?.find((c) => c.type === "Ready");
-  if (!ready) {
-    return <Badge variant="secondary" className="text-xs">Unknown</Badge>;
-  }
-  return ready.status === "True" ? (
-    <div className="flex items-center gap-1.5">
-      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-      <span className="text-sm text-emerald-700 dark:text-emerald-400">Ready</span>
-    </div>
-  ) : (
-    <div className="flex items-center gap-1.5">
-      <span className="h-2 w-2 rounded-full bg-amber-500" />
-      <span className="text-sm text-amber-700 dark:text-amber-400">Not Ready</span>
-    </div>
   );
 }

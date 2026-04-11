@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
-import type { TabDef, ActionDef, ListSectionDef, ResourceComponentProps } from "./types";
+import type { TabDef, ActionDef, ListSectionDef, ColumnDef, ResourceComponentProps } from "./types";
 
-export type { TabDef, ActionDef, ListSectionDef, ResourceComponentProps, ListComponentProps } from "./types";
+export type { TabDef, ActionDef, ListSectionDef, ColumnDef, ResourceComponentProps, ListComponentProps } from "./types";
 
 // --- Detail Tabs ---
 
@@ -49,6 +49,18 @@ export function registerListSections(plural: string, sections: ListSectionDef[])
 
 export function getListSections(plural: string): ListSectionDef[] {
   return listSectionRegistry.get(plural) ?? [];
+}
+
+// --- Table Columns ---
+
+const columnRegistry = new Map<string, ColumnDef[]>();
+
+export function registerColumns(plural: string, columns: ColumnDef[]): void {
+  columnRegistry.set(plural, columns);
+}
+
+export function getColumns(plural: string): ColumnDef[] | undefined {
+  return columnRegistry.get(plural);
 }
 
 // --- Default tabs ---
