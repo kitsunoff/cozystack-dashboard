@@ -32,6 +32,13 @@ export interface ActionDef {
   variant?: "default" | "destructive";
 }
 
+/** Column definition for instance table */
+export interface ColumnDef {
+  key: string;
+  label: string;
+  render: (instance: AppInstance) => React.ReactNode;
+}
+
 /** List section — custom component between table and events */
 export interface ListSectionDef {
   key: string;
