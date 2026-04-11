@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -213,7 +214,11 @@ export function InstanceTable({
                   </TableCell>
                 ))}
                 <TableCell className="py-3">
-                  <RowActions />
+                  <RowActions
+                    plural={plural}
+                    namespace={namespace}
+                    name={instance.metadata.name}
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -224,17 +229,46 @@ export function InstanceTable({
   );
 }
 
-function RowActions() {
+function RowActions({
+  plural,
+  namespace,
+  name,
+}: {
+  plural: string;
+  namespace: string;
+  name: string;
+}) {
   const [open, setOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
+  const router = useRouter();
 
   const handleOpen = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, left: rect.right - 144 }); // 144 = w-36
+      setPos({ top: rect.bottom + 4, left: rect.right - 144 });
     }
     setOpen(!open);
+    setConfirmDelete(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { k8sDelete } = await import("@/lib/k8s/client");
+      const { endpoints } = await import("@/lib/k8s/endpoints");
+      await k8sDelete(endpoints.instance(plural, namespace, name));
+      setOpen(false);
+      router.refresh();
+    } catch {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -254,18 +288,34 @@ function RowActions() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-50 w-36 rounded-lg border bg-popover text-popover-foreground shadow-lg py-1"
+            className="fixed z-50 w-44 rounded-lg border bg-popover text-popover-foreground shadow-lg py-1"
             style={{ top: pos.top, left: pos.left }}
           >
-            <button className="flex w-full px-3 py-1.5 text-sm text-left hover:bg-accent rounded-sm transition-colors">
-              View YAML
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push(`/apps/${plural}/${name}?namespace=${namespace}`);
+              }}
+              className="flex w-full px-3 py-1.5 text-sm text-left hover:bg-accent rounded-sm transition-colors"
+            >
+              View Details
             </button>
-            <button className="flex w-full px-3 py-1.5 text-sm text-left hover:bg-accent rounded-sm transition-colors">
+            <button
+              onClick={() => {
+                setOpen(false);
+                router.push(`/apps/${plural}/${name}/edit?namespace=${namespace}`);
+              }}
+              className="flex w-full px-3 py-1.5 text-sm text-left hover:bg-accent rounded-sm transition-colors"
+            >
               Edit
             </button>
             <div className="mx-1 my-1 h-px bg-border" />
-            <button className="flex w-full px-3 py-1.5 text-sm text-left text-destructive hover:bg-destructive/10 rounded-sm transition-colors">
-              Delete
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex w-full px-3 py-1.5 text-sm text-left text-destructive hover:bg-destructive/10 rounded-sm transition-colors"
+            >
+              {deleting ? "Deleting..." : confirmDelete ? "Confirm Delete" : "Delete"}
             </button>
           </div>
         </>

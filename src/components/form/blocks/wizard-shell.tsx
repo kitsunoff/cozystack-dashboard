@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FormProvider, useFormContext } from "@/components/form/form-context";
-import { k8sCreate } from "@/lib/k8s/client";
+import { k8sCreate, k8sPatch } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 
 interface WizardShellProps {
@@ -17,15 +17,14 @@ interface WizardShellProps {
   apiVersion: string;
   kind: string;
   backHref: string;
-  /** Display name for submit button: "Create {submitLabel}" */
   submitLabel: string;
+  /** When set, form is in edit mode — name is read-only, submit does PATCH */
+  editName?: string;
+  /** Existing spec values to prefill the form (edit mode) */
+  existingValues?: Record<string, unknown>;
   children: React.ReactNode;
 }
 
-/**
- * Shared wizard shell — provides FormProvider, name input, submit/cancel buttons.
- * Children are the form blocks rendered between name and submit.
- */
 export function WizardShell({
   schema,
   plural,
@@ -35,10 +34,16 @@ export function WizardShell({
   kind,
   backHref,
   submitLabel,
+  editName,
+  existingValues,
   children,
 }: WizardShellProps) {
+  const initialValues = existingValues
+    ? deepMerge(buildDefaults(schema), existingValues)
+    : buildDefaults(schema);
+
   return (
-    <FormProvider initialValues={buildDefaults(schema)} namespace={namespace}>
+    <FormProvider initialValues={initialValues} namespace={namespace}>
       <WizardShellInner
         plural={plural}
         namespace={namespace}
@@ -47,6 +52,7 @@ export function WizardShell({
         kind={kind}
         backHref={backHref}
         submitLabel={submitLabel}
+        editName={editName}
       >
         {children}
       </WizardShellInner>
@@ -62,13 +68,15 @@ function WizardShellInner({
   kind,
   backHref,
   submitLabel,
+  editName,
   children,
-}: Omit<WizardShellProps, "schema">) {
+}: Omit<WizardShellProps, "schema" | "existingValues">) {
   const router = useRouter();
   const { values } = useFormContext();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(editName ?? "");
+  const isEdit = !!editName;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,15 +85,22 @@ function WizardShellInner({
     setError(null);
 
     try {
-      await k8sCreate(endpoints.instances(plural, namespace), {
-        apiVersion: `${apiGroup}/${apiVersion}`,
-        kind,
-        metadata: { name: name.trim(), namespace },
-        spec: values,
-      });
+      if (isEdit) {
+        await k8sPatch(
+          endpoints.instance(plural, namespace, name.trim()),
+          { spec: values }
+        );
+      } else {
+        await k8sCreate(endpoints.instances(plural, namespace), {
+          apiVersion: `${apiGroup}/${apiVersion}`,
+          kind,
+          metadata: { name: name.trim(), namespace },
+          spec: values,
+        });
+      }
       router.push(backHref);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create resource");
+      setError(err instanceof Error ? err.message : `Failed to ${isEdit ? "update" : "create"} resource`);
     } finally {
       setSubmitting(false);
     }
@@ -97,10 +112,12 @@ function WizardShellInner({
         <Label className="text-sm font-medium">Name</Label>
         <Input
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => !isEdit && setName(e.target.value)}
           placeholder="my-instance"
           required
-          autoFocus
+          autoFocus={!isEdit}
+          readOnly={isEdit}
+          className={isEdit ? "bg-muted cursor-not-allowed" : ""}
         />
       </div>
 
@@ -114,7 +131,9 @@ function WizardShellInner({
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Creating..." : `Create ${submitLabel}`}
+          {submitting
+            ? (isEdit ? "Saving..." : "Creating...")
+            : (isEdit ? `Save ${submitLabel}` : `Create ${submitLabel}`)}
         </Button>
         <Button type="button" variant="ghost" onClick={() => router.push(backHref)}>
           Cancel
@@ -136,6 +155,30 @@ function buildDefaults(schema: Record<string, unknown>): Record<string, unknown>
       if (Object.keys(nested).length > 0) {
         result[key] = nested;
       }
+    }
+  }
+  return result;
+}
+
+function deepMerge(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>
+): Record<string, unknown> {
+  const result = { ...target };
+  for (const key of Object.keys(source)) {
+    if (
+      typeof result[key] === "object" &&
+      result[key] !== null &&
+      typeof source[key] === "object" &&
+      source[key] !== null &&
+      !Array.isArray(result[key])
+    ) {
+      result[key] = deepMerge(
+        result[key] as Record<string, unknown>,
+        source[key] as Record<string, unknown>
+      );
+    } else {
+      result[key] = source[key];
     }
   }
   return result;

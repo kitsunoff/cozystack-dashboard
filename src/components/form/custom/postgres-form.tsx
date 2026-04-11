@@ -21,6 +21,8 @@ export function PostgresForm({
   kind,
   backHref,
   openAPISchema,
+  editName,
+  editValues,
 }: CustomFormProps) {
   const schema = openAPISchema ?? {};
 
@@ -34,6 +36,8 @@ export function PostgresForm({
       kind={kind}
       backHref={backHref}
       submitLabel="PostgreSQL"
+      editName={editName}
+      existingValues={editValues}
     >
       <Separator />
       <VersionPicker schema={schema} />
