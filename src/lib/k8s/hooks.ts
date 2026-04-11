@@ -13,6 +13,7 @@ import type {
   ApplicationDefinition,
   AppInstance,
   K8sEvent,
+  MachineDeployment,
 } from "./types";
 
 export function useMarketplacePanels() {
@@ -254,6 +255,39 @@ export function useTenantPermissions(namespace: string) {
     },
     enabled: !!namespace,
     staleTime: 5 * 60_000,
+  });
+}
+
+// --- Cluster API ---
+
+/**
+ * Fetch MachineDeployments for a Kubernetes cluster instance.
+ * MachineDeployments are named {releasePrefix}{instanceName}-{nodeGroupName}.
+ */
+export function useMachineDeployments(
+  namespace: string,
+  releasePrefix: string,
+  instanceName: string
+) {
+  const labelSelector = `cluster.x-k8s.io/cluster-name=${releasePrefix}${instanceName}`;
+
+  return useQuery({
+    queryKey: ["machineDeployments", namespace, releasePrefix, instanceName],
+    queryFn: () =>
+      k8sList<MachineDeployment>(endpoints.machineDeployments(namespace), { labelSelector }),
+    enabled: !!namespace && !!instanceName,
+    select: (data) => {
+      // Build map: nodeGroupName → status
+      const map = new Map<string, MachineDeployment["status"]>();
+      const prefix = `${releasePrefix}${instanceName}-`;
+      for (const md of data.items) {
+        const ngName = md.metadata.name.startsWith(prefix)
+          ? md.metadata.name.slice(prefix.length)
+          : md.metadata.name;
+        map.set(ngName, md.status);
+      }
+      return map;
+    },
   });
 }
 
