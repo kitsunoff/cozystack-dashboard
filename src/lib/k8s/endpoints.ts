@@ -50,6 +50,7 @@ export const endpoints = {
     plural: string
   ) => `/apis/${apiGroup}/${apiVersion}/${plural}`,
 
-  // Core API resources (e.g., namespaces)
+  // Core API resources
   namespaces: () => "/api/v1/namespaces",
+  events: (namespace: string) => `/api/v1/namespaces/${namespace}/events`,
 } as const;

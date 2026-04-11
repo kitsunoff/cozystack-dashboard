@@ -1,45 +1,63 @@
 "use client";
 
-import type { ActivityEvent } from "./mock-data";
+import type { K8sEvent } from "@/lib/k8s/types";
 
-const EVENT_ICONS: Record<ActivityEvent["type"], { icon: string; color: string }> = {
-  created: { icon: "+", color: "text-emerald-600 bg-emerald-500/10" },
-  updated: { icon: "↻", color: "text-blue-600 bg-blue-500/10" },
-  scaled: { icon: "⇅", color: "text-violet-600 bg-violet-500/10" },
-  backup: { icon: "↓", color: "text-cyan-600 bg-cyan-500/10" },
-  error: { icon: "!", color: "text-red-600 bg-red-500/10" },
-  upgrade: { icon: "↑", color: "text-indigo-600 bg-indigo-500/10" },
-  addon: { icon: "⊕", color: "text-teal-600 bg-teal-500/10" },
+const TYPE_STYLES: Record<string, { icon: string; color: string }> = {
+  Normal: { icon: "✓", color: "text-emerald-600 bg-emerald-500/10" },
+  Warning: { icon: "!", color: "text-amber-600 bg-amber-500/10" },
 };
 
 interface ActivityFeedProps {
-  events: ActivityEvent[];
+  events: K8sEvent[];
 }
 
 export function ActivityFeed({ events }: ActivityFeedProps) {
+  if (events.length === 0) {
+    return (
+      <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+        No events
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1">
       {events.map((event) => {
-        const { icon, color } = EVENT_ICONS[event.type] ?? { icon: "•", color: "text-gray-600 bg-gray-500/10" };
+        const { icon, color } = TYPE_STYLES[event.type] ?? TYPE_STYLES.Normal;
+        const timestamp =
+          event.lastTimestamp || event.eventTime || event.metadata.creationTimestamp || "";
         return (
           <div
-            key={event.id}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-accent/50 transition-colors"
+            key={event.metadata.uid ?? `${event.involvedObject.name}-${timestamp}`}
+            className="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-accent/50 transition-colors"
           >
             <span
-              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold shrink-0 ${color}`}
+              className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold shrink-0 mt-0.5 ${color}`}
             >
               {icon}
             </span>
             <div className="flex-1 min-w-0">
               <div className="text-sm">
-                <span className="font-medium">{event.instance}</span>
-                <span className="text-muted-foreground"> — {event.message}</span>
+                <span className="font-medium">{event.involvedObject.name}</span>
+                <span className="text-muted-foreground/60 mx-1.5">·</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {event.reason}
+                </span>
               </div>
+              <p className="text-sm text-muted-foreground mt-0.5 break-words">
+                {event.message}
+              </p>
             </div>
-            <span className="text-xs text-muted-foreground shrink-0">
-              {formatRelative(event.timestamp)}
-            </span>
+            <div className="flex flex-col items-end shrink-0 gap-0.5">
+              <span className="text-xs text-muted-foreground">
+                {formatRelative(timestamp)}
+              </span>
+              {event.count && event.count > 1 && (
+                <span className="text-xs text-muted-foreground/60">
+                  ×{event.count}
+                </span>
+              )}
+            </div>
           </div>
         );
       })}
@@ -48,11 +66,13 @@ export function ActivityFeed({ events }: ActivityFeedProps) {
 }
 
 function formatRelative(timestamp: string): string {
+  if (!timestamp) return "";
   const diff = Date.now() - new Date(timestamp).getTime();
   const min = 60_000;
   const hour = 60 * min;
   const day = 24 * hour;
 
+  if (diff < 0) return "just now";
   if (diff < min) return "just now";
   if (diff < hour) return `${Math.floor(diff / min)}m ago`;
   if (diff < day) return `${Math.floor(diff / hour)}h ago`;

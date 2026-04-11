@@ -31,6 +31,32 @@ export interface CommonStatus {
   conditions?: Condition[];
 }
 
+// Core Kubernetes Event
+export interface K8sEvent {
+  apiVersion: string;
+  kind: "Event";
+  metadata: ObjectMeta;
+  involvedObject: {
+    apiVersion?: string;
+    kind: string;
+    name: string;
+    namespace?: string;
+    uid?: string;
+    fieldPath?: string;
+  };
+  reason: string;
+  message: string;
+  source?: {
+    component?: string;
+    host?: string;
+  };
+  type: "Normal" | "Warning";
+  firstTimestamp?: string;
+  lastTimestamp?: string;
+  count?: number;
+  eventTime?: string;
+}
+
 // dashboard.cozystack.io/v1alpha1
 
 export interface MarketplacePanel {
