@@ -195,6 +195,7 @@ Namespace is carried as `?namespace=xxx` URL search param. Only `tenant-*` names
 
 ## Conventions
 
+- **Always use static imports** — never use dynamic `import()` for project modules. All imports must be at the top of the file. Dynamic imports add unnecessary complexity and break tree-shaking.
 - Components use `"use client"` directive — no Server Components for data fetching (auth goes through browser)
 - shadcn/ui components in `src/components/ui/` — generated via `npx shadcn@latest add`
 - Service colors and group labels defined in `src/lib/service-meta.ts`
