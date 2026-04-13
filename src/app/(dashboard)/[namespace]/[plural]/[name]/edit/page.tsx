@@ -14,7 +14,7 @@ import { DeclarativeForm } from "@/components/form/declarative";
 import { useDashboardForm } from "@/lib/k8s/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import "@/components/form/custom";
+import "@/plugins";
 
 function EditInstanceContent({
   plural,

@@ -17,7 +17,7 @@ import { getListSections } from "@/components/registry";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Activate registrations
-import "@/components/registry/registrations";
+import "@/plugins";
 
 function InstancesContent({ plural }: { plural: string }) {
   const { namespace } = useNamespace();

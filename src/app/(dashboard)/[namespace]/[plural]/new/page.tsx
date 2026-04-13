@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { CFOSpec, CFPSpec } from "@/lib/schema/types";
 
 // Register all custom forms (side-effect import)
-import "@/components/form/custom";
+import "@/plugins";
 
 function CreateInstanceContent({ plural }: { plural: string }) {
   const { namespace } = useNamespace();

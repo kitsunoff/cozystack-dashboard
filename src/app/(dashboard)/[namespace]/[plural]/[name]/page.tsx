@@ -11,7 +11,7 @@ import { DetailQuickActions } from "@/components/instances/detail-quick-actions"
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Activate all registrations
-import "@/components/registry/registrations";
+import "@/plugins";
 
 function InstanceDetailContent({
   plural,
