@@ -1,17 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import https from "https";
 import http from "http";
 import { getKubeConfig, getHttpsAgent } from "@/lib/k8s/server";
 
 export const dynamic = "force-dynamic";
-
-const ALLOWED_PREFIXES = [
-  "/apis/apps.cozystack.io/",
-  "/apis/dashboard.cozystack.io/",
-  "/apis/cozystack.io/",
-  "/apis/cluster.x-k8s.io/",
-  "/api/v1/namespaces/",
-];
 
 export async function GET(
   request: NextRequest,
@@ -19,10 +11,6 @@ export async function GET(
 ) {
   const { path } = await params;
   const k8sPath = "/" + path.join("/");
-
-  if (!ALLOWED_PREFIXES.some((p) => k8sPath.startsWith(p))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const config = getKubeConfig();
   const agent = getHttpsAgent();

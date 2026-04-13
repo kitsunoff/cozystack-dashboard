@@ -7,9 +7,9 @@ import type { ComponentType } from "react";
 import { registerDetailTabs, registerDetailActions, registerColumns, registerStatusRenderer } from "./index";
 import type { ResourceComponentProps, ColumnDef } from "./types";
 import type { AppInstance } from "@/lib/k8s/types";
-import { k8sPatch } from "@/lib/k8s/client";
+import { k8sPatch, k8sGet } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
-import { Power, PowerOff, RotateCw } from "lucide-react";
+import { Power, PowerOff, RotateCw, Download } from "lucide-react";
 import { LiveAge } from "@/components/ui/live-age";
 
 // --- Helpers ---
@@ -177,6 +177,36 @@ registerDetailActions("vminstances", [
       await k8sPatch(path, { spec: { runStrategy: "Halted" } });
       await new Promise((r) => setTimeout(r, 2000));
       await k8sPatch(path, { spec: { runStrategy: "Always" } });
+    },
+  },
+]);
+
+// --- Kubernetes actions ---
+
+registerDetailActions("kuberneteses", [
+  {
+    key: "download-kubeconfig",
+    label: "Kubeconfig",
+    icon: Download,
+    action: async ({ namespace, instance }) => {
+      if (!instance) return;
+      const secretName = `kubernetes-${instance.metadata.name}-admin-kubeconfig`;
+      const secret = await k8sGet<{
+        data: Record<string, string>;
+      }>(`/api/v1/namespaces/${namespace}/secrets/${secretName}`);
+
+      const kubeconfig = secret.data["admin.conf"];
+      if (!kubeconfig) throw new Error("admin.conf not found in secret");
+
+      // Decode base64 and trigger download
+      const decoded = atob(kubeconfig);
+      const blob = new Blob([decoded], { type: "application/yaml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${instance.metadata.name}-kubeconfig.yaml`;
+      a.click();
+      URL.revokeObjectURL(url);
     },
   },
 ]);

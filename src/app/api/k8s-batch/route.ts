@@ -3,14 +3,6 @@ import https from "https";
 import http from "http";
 import { getKubeConfig, getHttpsAgent } from "@/lib/k8s/server";
 
-const ALLOWED_PREFIXES = [
-  "/apis/apps.cozystack.io/",
-  "/apis/dashboard.cozystack.io/",
-  "/apis/cozystack.io/",
-  "/apis/cluster.x-k8s.io/",
-  "/api/v1/namespaces",
-];
-
 interface BatchRequest {
   paths: string[];
 }
@@ -30,15 +22,6 @@ export async function POST(request: NextRequest) {
 
   if (paths.length > 50) {
     return NextResponse.json({ error: "max 50 paths per batch" }, { status: 400 });
-  }
-
-  // Validate all paths against allowlist
-  const forbidden = paths.filter((p) => !ALLOWED_PREFIXES.some((a) => p.startsWith(a)));
-  if (forbidden.length > 0) {
-    return NextResponse.json(
-      { error: "Forbidden paths", paths: forbidden },
-      { status: 403 }
-    );
   }
 
   const config = getKubeConfig();
