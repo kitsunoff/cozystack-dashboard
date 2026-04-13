@@ -23,7 +23,7 @@ import { getColumns } from "@/components/registry";
 import type { ColumnDef } from "@/components/registry";
 
 // Activate registrations
-import "@/components/registry/registrations";
+import "@/plugins";
 
 // --- Default columns for unregistered resources ---
 
