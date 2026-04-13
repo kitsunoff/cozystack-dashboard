@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { k8sList, k8sGet, k8sCreate, k8sBatch } from "./client";
+import { useK8sWatch } from "./watch";
 import { endpoints } from "./endpoints";
 import type {
   MarketplacePanel,
@@ -26,12 +27,22 @@ export function useMarketplacePanels() {
 }
 
 export function useInstances(plural: string, namespace: string) {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["instances", plural, namespace],
     queryFn: () =>
       k8sList<AppInstance>(endpoints.instances(plural, namespace)),
     enabled: !!plural && !!namespace,
   });
+
+  // Subscribe to watch events for real-time updates
+  useK8sWatch(
+    endpoints.instances(plural, namespace),
+    ["instances", plural, namespace],
+    query.data?.metadata.resourceVersion,
+    !!plural && !!namespace && !!query.data
+  );
+
+  return query;
 }
 
 export interface ServiceInstances {
