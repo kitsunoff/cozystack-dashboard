@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { k8sList, k8sGet, k8sCreate } from "./client";
 import { endpoints } from "./endpoints";
 import type {
@@ -32,6 +32,36 @@ export function useInstances(plural: string, namespace: string) {
       k8sList<AppInstance>(endpoints.instances(plural, namespace)),
     enabled: !!plural && !!namespace,
   });
+}
+
+export interface ServiceInstances {
+  panel: MarketplacePanel;
+  instances: AppInstance[];
+}
+
+export function useAllInstances(namespace: string, panels?: MarketplacePanel[]) {
+  const queries = useQueries({
+    queries: (panels ?? []).map((panel) => ({
+      queryKey: ["instances", panel.spec.plural, namespace],
+      queryFn: () =>
+        k8sList<AppInstance>(endpoints.instances(panel.spec.plural, namespace)),
+      enabled: !!namespace,
+    })),
+  });
+
+  const isLoading = queries.some((q) => q.isLoading);
+  const data: ServiceInstances[] = [];
+
+  if (panels) {
+    for (let i = 0; i < panels.length; i++) {
+      const items = queries[i]?.data?.items ?? [];
+      if (items.length > 0) {
+        data.push({ panel: panels[i], instances: items });
+      }
+    }
+  }
+
+  return { data, isLoading };
 }
 
 export function useInstance(

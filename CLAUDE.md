@@ -189,12 +189,13 @@ registerDetailActions("vminstances", [
 Two route groups with different layouts:
 
 - `(tenant-select)` — no sidebar, used by `/tenants`
-- `(dashboard)` — sidebar + main area, used by `/platform-apps`, `/apps/*`
+- `(dashboard)` — sidebar + main area, used by `/platform-apps`, `/overview`, `/apps/*`
 
 ```text
 /                              → redirect to /tenants
 /tenants                       → tenant (namespace) selection, no sidebar
 /platform-apps                   → Platform Apps catalog with tag filters and search
+/overview                        → all instances grouped by service type with search
 /apps/[plural]                 → instance list with metrics, table, events
 /apps/[plural]/new             → create form (custom or generic)
 /apps/[plural]/[name]          → instance detail with tabs
