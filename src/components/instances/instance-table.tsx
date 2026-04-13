@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { AppInstance } from "@/lib/k8s/types";
 import { k8sDelete } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
-import { formatAge } from "@/lib/utils";
+import { LiveAge } from "@/components/ui/live-age";
 import { getColumns } from "@/components/registry";
 import type { ColumnDef } from "@/components/registry";
 
@@ -50,7 +50,7 @@ const defaultColumns: ColumnDef[] = [
   { key: "replicas", label: "Replicas", render: (i) => <span className="text-sm tabular-nums">{String(i.spec.replicas ?? "—")}</span> },
   { key: "preset", label: "Preset", render: (i) => i.spec.resourcesPreset ? <Badge variant="secondary" className="text-xs font-normal">{String(i.spec.resourcesPreset)}</Badge> : <span className="text-sm text-muted-foreground">—</span> },
   { key: "storage", label: "Storage", render: (i) => <span className="text-sm tabular-nums text-muted-foreground">{String(i.spec.size ?? "—")}</span> },
-  { key: "age", label: "Age", render: (i) => <span className="text-sm text-muted-foreground">{formatAge(i.metadata.creationTimestamp)}</span> },
+  { key: "age", label: "Age", render: (i) => <LiveAge timestamp={i.metadata.creationTimestamp} className="text-sm text-muted-foreground" /> },
 ];
 
 function resolveColumns(plural: string): ColumnDef[] {
