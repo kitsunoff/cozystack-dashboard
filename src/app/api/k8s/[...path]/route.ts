@@ -3,23 +3,12 @@ import https from "https";
 import http from "http";
 import { getKubeConfig, getHttpsAgent } from "@/lib/k8s/server";
 
-// Allowed K8s API path prefixes — block access to secrets, nodes, etc.
-const ALLOWED_PREFIXES = [
-  "/apis/apps.cozystack.io/",
-  "/apis/dashboard.cozystack.io/",
-  "/apis/cozystack.io/",
-  "/apis/authorization.k8s.io/v1/selfsubjectrulesreviews",
-  "/apis/cluster.x-k8s.io/",
-  "/api/v1/namespaces",
-  "/api/v1/namespaces/",  // events: /api/v1/namespaces/{ns}/events
-];
+// Access control is delegated to Kubernetes RBAC — the proxy forwards
+// requests with the configured token, and K8s API returns 403 if the
+// identity lacks permissions. No client-side allowlist needed.
 
 const MAX_BODY_SIZE = 1_048_576; // 1 MB
 const REQUEST_TIMEOUT = 30_000;  // 30 seconds
-
-function isPathAllowed(path: string): boolean {
-  return ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix));
-}
 
 export async function GET(
   request: NextRequest,
@@ -61,15 +50,6 @@ async function proxyToK8s(
   { path }: { path: string[] }
 ) {
   const k8sPath = "/" + path.join("/");
-
-  // Path allowlist check
-  if (!isPathAllowed(k8sPath)) {
-    return NextResponse.json(
-      { error: "Forbidden", message: `Access to ${k8sPath} is not allowed` },
-      { status: 403 }
-    );
-  }
-
   const config = getKubeConfig();
   const agent = getHttpsAgent();
 
