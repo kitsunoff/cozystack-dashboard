@@ -1,4 +1,4 @@
-# RFC: Declarative Form Descriptions in ApplicationDefinition
+# RFC: Declarative Form Descriptions via DashboardForm CRD
 
 ## Problem
 
@@ -12,7 +12,7 @@ Currently, adding or modifying a form for a Cozystack application requires writi
 
 ## Goals
 
-- Operators describe forms in `ApplicationDefinition` CRD — no frontend code
+- Operators describe forms in a CRD — no frontend code
 - Reuses existing form blocks (VersionPicker, ResourcesPicker, etc.)
 - Supports conditional visibility (show field X when field Y = value)
 - Supports sections/grouping with titles
@@ -20,78 +20,165 @@ Currently, adding or modifying a form for a Cozystack application requires writi
 - Custom forms (VM Instance, Kubernetes) remain as override for complex cases
 - Plugins can register new block types referenced from CRD
 
-## Proposed format
+## Why a separate CRD (not in ApplicationDefinition)
 
-New field `spec.dashboard.form` in ApplicationDefinition:
+| Concern | In ApplicationDefinition | Separate DashboardForm CRD |
+|---|---|---|
+| Lifecycle | Managed by Helm/platform upgrade | Managed by cluster operator independently |
+| RBAC | Needs ApplicationDefinition write access | Separate RBAC — UI team can edit forms without touching infra |
+| Ownership | Platform vendor | Cluster operator / UI customizer |
+| Precedent | — | CFO and CFP are already separate CRDs for UI customization |
+| Coupling | Mixes infra + frontend in one resource | Clean separation of concerns |
+
+ApplicationDefinition is generated from Helm charts during platform install. Embedding UI layout there means chart authors must know about dashboard internals. A separate CRD lets operators customize forms without modifying charts.
+
+## Proposed CRD
 
 ```yaml
-apiVersion: cozystack.io/v1alpha1
-kind: ApplicationDefinition
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
 metadata:
-  name: postgres
+  name: postgres-form
+  labels:
+    dashboard.cozystack.io/crd-plural: postgreses
 spec:
-  application:
-    kind: Postgres
-    plural: postgreses
-    openAPISchema: "..."  # existing — provides types, enums, defaults
-  dashboard:
-    category: PaaS
-    form:
-      sections:
-        - id: general
-          title: General
-          fields:
-            - key: version
-              block: version-picker
+  target:
+    plural: postgreses                    # links to ApplicationDefinition
+    apiGroup: apps.cozystack.io           # optional, default apps.cozystack.io
+  sections:
+    - id: general
+      title: General
+      fields:
+        - key: version
+          block: version-picker
 
-        - id: resources
-          title: Resources
-          fields:
-            - key: resourcesPreset
-              block: resources-picker
-            - key: size
-              block: storage-picker
-              with: [storageClass]
+    - id: resources
+      title: Resources
+      fields:
+        - key: resourcesPreset
+          block: resources-picker
+        - key: size
+          block: storage-picker
+          with: [storageClass]
 
-        - id: scaling
-          title: Scaling
-          fields:
-            - key: replicas
-              block: replicas-picker
+    - id: scaling
+      title: Scaling
+      fields:
+        - key: replicas
+          block: replicas-picker
 
-        - id: access
-          title: Access
-          fields:
-            - key: external
-              block: external-toggle
-              showFields:
-                when: true
-                fields: [externalMethod, externalPorts]
+    - id: access
+      title: Access
+      fields:
+        - key: external
+          block: external-toggle
+          showFields:
+            when: true
+            fields: [externalMethod, externalPorts]
 
-        - id: users
-          title: Users & Databases
-          fields:
-            - key: users
-              block: users-list
-            - key: databases
-              block: generic
+    - id: users
+      title: Users & Databases
+      fields:
+        - key: users
+          block: users-list
+        - key: databases
+          block: generic
 
-        - id: backup
-          title: Backup
-          fields:
-            - key: backup
-              block: backup-config
+    - id: backup
+      title: Backup
+      fields:
+        - key: backup
+          block: backup-config
 ```
 
-### Field definition
+### Example: Kafka (nested config with basePath)
+
+```yaml
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: kafka-form
+spec:
+  target:
+    plural: kafkas
+  sections:
+    - id: kafka
+      title: Kafka
+      fields:
+        - key: replicas
+          block: replicas-picker
+          basePath: [kafka]
+        - key: resourcesPreset
+          block: resources-picker
+          basePath: [kafka]
+        - key: size
+          block: storage-picker
+          basePath: [kafka]
+          with: [storageClass]
+
+    - id: zookeeper
+      title: ZooKeeper
+      fields:
+        - key: replicas
+          block: replicas-picker
+          basePath: [zookeeper]
+        - key: resourcesPreset
+          block: resources-picker
+          basePath: [zookeeper]
+        - key: size
+          block: storage-picker
+          basePath: [zookeeper]
+          with: [storageClass]
+
+    - id: access
+      title: Access
+      fields:
+        - key: external
+          block: external-toggle
+
+    - id: topics
+      title: Topics
+      fields:
+        - key: topics
+          block: generic
+```
+
+### Example: Minimal form (inline annotation alternative)
+
+For simple overrides, a DashboardForm can be very short:
+
+```yaml
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: qdrant-form
+spec:
+  target:
+    plural: qdrants
+  sections:
+    - id: main
+      title: Configuration
+      fields:
+        - key: resourcesPreset
+          block: resources-picker
+        - key: size
+          block: storage-picker
+          with: [storageClass]
+        - key: replicas
+          block: replicas-picker
+        - key: external
+          block: external-toggle
+```
+
+## Field definition
 
 ```yaml
 fields:
-  - key: string              # dot-path in spec (e.g. "backup.enabled", "kafka.replicas")
-    block: string             # block type to render (see built-in blocks below)
+  - key: string              # field key in spec (e.g. "replicas", "backup.enabled")
+    block: string             # block type to render (see built-in blocks)
     title: string             # optional title override (default: from schema description)
-    with: [string]            # include related fields in same block (e.g. storageClass with size)
-    basePath: [string]        # for nested config (e.g. ["kafka"] for kafka.replicas)
+    with: [string]            # include related fields in same block
+    basePath: [string]        # for nested config (e.g. ["kafka"] → spec.kafka.*)
     showFields:               # conditional visibility
       when: any               # value that triggers showing
       fields: [string]        # field keys to show/hide
@@ -99,7 +186,21 @@ fields:
     readOnly: boolean         # show but don't allow editing
 ```
 
-### Built-in block types
+## Section definition
+
+```yaml
+sections:
+  - id: string               # unique identifier
+    title: string             # displayed as section header
+    collapsible: boolean      # default false
+    defaultOpen: boolean      # default true (when collapsible)
+    showIf:                   # conditional section visibility
+      field: string           # field key to check
+      value: any              # value that makes section visible
+    fields: [...]
+```
+
+## Built-in block types
 
 | Block ID | Component | Auto-hides when |
 |---|---|---|
@@ -110,7 +211,7 @@ fields:
 | `external-toggle` | ExternalToggle | No `external` |
 | `users-list` | UsersList | No `users` |
 | `backup-config` | BackupConfig | No `backup` |
-| `generic` | Generic field renderer | Never (renders any schema field) |
+| `generic` | Generic field renderer | Never |
 | `enum-picker` | Buttons for enum values | No enum in schema |
 | `text-input` | Simple text input | Never |
 | `number-input` | Number input | Never |
@@ -118,179 +219,92 @@ fields:
 | `multiline` | Textarea | Never |
 | `json-editor` | Code editor for JSON/YAML | Never |
 
-Plugins can register additional block types:
+Plugins register additional blocks:
 
 ```tsx
-// In plugin code
 import { registerFormBlock } from "@cozystack/sdk";
-
 registerFormBlock("gpu-selector", GPUSelectorBlock);
 ```
 
-Then referenced from CRD:
+Referenced from CRD:
 
 ```yaml
-fields:
-  - key: gpus
-    block: gpu-selector  # custom block from plugin
-```
-
-### Section definition
-
-```yaml
-sections:
-  - id: string          # unique identifier
-    title: string        # displayed as section header
-    collapsible: boolean # default false
-    defaultOpen: boolean # default true (when collapsible)
-    showIf:              # conditional section visibility
-      field: string      # field key to check
-      value: any         # value that makes section visible
-    fields: [...]
-```
-
-### Conditional visibility
-
-Inspired by Rancher's `show_if` / `show_subquestion_if`:
-
-```yaml
-# Show fields when a toggle is enabled
-- key: external
-  block: external-toggle
-  showFields:
-    when: true
-    fields: [externalMethod, externalPorts]
-
-# Show entire section conditionally
-sections:
-  - id: backup-config
-    title: Backup Configuration
-    showIf:
-      field: backup.enabled
-      value: true
-    fields:
-      - key: backup.schedule
-        block: text-input
-      - key: backup.destinationPath
-        block: text-input
-```
-
-### Nested config (basePath)
-
-For resources like Kafka where config is nested:
-
-```yaml
-sections:
-  - id: kafka
-    title: Kafka
-    fields:
-      - key: replicas
-        block: replicas-picker
-        basePath: [kafka]            # → spec.kafka.replicas
-      - key: resourcesPreset
-        block: resources-picker
-        basePath: [kafka]            # → spec.kafka.resourcesPreset
-      - key: size
-        block: storage-picker
-        basePath: [kafka]
-        with: [storageClass]
-
-  - id: zookeeper
-    title: ZooKeeper
-    fields:
-      - key: replicas
-        block: replicas-picker
-        basePath: [zookeeper]        # → spec.zookeeper.replicas
-      - key: resourcesPreset
-        block: resources-picker
-        basePath: [zookeeper]
+- key: gpus
+  block: gpu-selector
 ```
 
 ## Rendering pipeline
 
 ```
-ApplicationDefinition.spec.dashboard.form
+DashboardForm CRD (fetched by dashboard)
         ↓
-  FormRenderer reads sections + fields
+  OpenAPI schema from ApplicationDefinition
         ↓
-  For each field:
-    1. Look up block component by block ID (built-in or plugin)
-    2. Extract schema slice using key + basePath
-    3. Pass schema + basePath to block component
-    4. Block reads/writes FormContext as before
+  DeclarativeForm component:
+    For each section:
+      Evaluate showIf condition against FormContext values
+      For each field:
+        Look up block component by block ID
+        Extract schema slice using key + basePath
+        Evaluate showFields conditions
+        Render block with schema + basePath
         ↓
-  Conditional visibility evaluated on FormContext values
-        ↓
-  WizardShell wraps everything (name input, submit, error, edit mode)
-```
-
-```tsx
-// Pseudocode
-function DeclarativeForm({ formSpec, schema, ...wizardProps }) {
-  return (
-    <WizardShell schema={schema} {...wizardProps}>
-      {formSpec.sections.map(section => (
-        <ConditionalSection key={section.id} section={section}>
-          <Separator />
-          <h3>{section.title}</h3>
-          {section.fields.map(field => (
-            <ConditionalField key={field.key} field={field}>
-              <BlockRenderer
-                blockId={field.block}
-                schema={schemaAt(schema, field.basePath ?? [])}
-                basePath={field.basePath}
-                title={field.title}
-              />
-            </ConditionalField>
-          ))}
-        </ConditionalSection>
-      ))}
-    </WizardShell>
-  );
-}
+  WizardShell wraps everything (name, submit, error, edit mode)
 ```
 
 ## Priority / fallback chain
 
 When rendering a form for a resource:
 
-1. **Custom form** registered via `registerCustomForm(plural)` → highest priority, full control
-2. **Declarative form** from `ApplicationDefinition.spec.dashboard.form` → generated from CRD
-3. **Generic form** from OpenAPI schema + CFO/CFP → fallback for resources without form definition
+1. **Custom form** registered via `registerCustomForm(plural)` → highest priority, full React control
+2. **DashboardForm CRD** for this plural → declarative, generated from YAML
+3. **Generic form** from OpenAPI schema + CFO/CFP → automatic fallback
 
 This means:
-- Existing custom forms (VM Instance, Kubernetes) keep working
-- Operators can add declarative forms without code
-- Unknown applications still get a basic form from schema
+- Existing custom forms (VM Instance, Kubernetes) keep working unchanged
+- Operators add DashboardForm CRDs for their applications — forms appear without code
+- Unknown applications with no DashboardForm still get a basic form from schema
 
-## Comparison with current approaches
+## Relationship with existing CRDs
 
-| Feature | Rancher questions.yaml | Cozystack OpenAPI | Proposed declarative form |
+```
+ApplicationDefinition          → What the app is (schema, kind, plural)
+DashboardForm                  → How the create/edit form looks (sections, blocks)
+CustomFormsOverride (CFO)      → Field-level overrides (hidden, sort, types) for generic form
+CustomFormsPrefill (CFP)       → Default values for form fields
+CustomColumnsOverride          → Table column overrides (future: merge with DashboardView?)
+```
+
+DashboardForm replaces the need for CFO in most cases — it provides more control over form layout. CFO remains as a lightweight alternative for simple overrides on the generic form.
+
+## Comparison with alternatives
+
+| Feature | Rancher questions.yaml | Current OpenAPI + CFO | DashboardForm CRD |
 |---|---|---|---|
 | Form layout | Flat list + groups | Schema-driven (no layout) | Sections + fields |
 | Field types | Custom type system | JSON Schema types | Block IDs (reusable components) |
 | Conditional | `show_if` string expressions | CFO hidden field | `showFields` / `showIf` |
-| Defaults | In questions.yaml | In OpenAPI schema | From schema (no duplication) |
+| Defaults | Duplicated in questions | In OpenAPI schema | From schema (no duplication) |
 | Validation | `min`/`max`/`required` | JSON Schema | From schema (no duplication) |
 | Extensibility | No | CFO/CFP CRDs | Plugin blocks + CRD |
 | Nested config | Dot-notation | Native objects | `basePath` |
-
-Key difference: we don't duplicate schema information (types, defaults, validation) in the form definition. The form only describes **layout and block selection**. Types and validation come from OpenAPI schema.
+| Lifecycle | Part of chart | Part of platform | Independent CRD |
+| RBAC | Chart publish access | ApplicationDefinition access | Separate DashboardForm access |
 
 ## Implementation steps
 
-1. Define TypeScript types for `FormSpec`, `SectionSpec`, `FieldSpec`
-2. Create `BlockRegistry` — maps block IDs to React components
-3. Register all existing blocks (version-picker, resources-picker, etc.)
-4. Create `DeclarativeForm` component that renders from `FormSpec`
+1. Define TypeScript types: `DashboardFormSpec`, `SectionSpec`, `FieldSpec`
+2. Add `dashboardforms` to K8s endpoints and hooks (`useDashboardForm(plural)`)
+3. Create `BlockRegistry` — maps block IDs to React components, register built-ins
+4. Create `DeclarativeForm` component that renders from `DashboardFormSpec`
 5. Create `ConditionalSection` / `ConditionalField` wrappers
-6. Update form resolution: custom form → declarative form → generic form
-7. Add `form` field to `ApplicationDefinition` TypeScript type
-8. Migrate one existing form (e.g. Redis) to declarative as proof of concept
+6. Update form resolution in new/edit page: custom → DashboardForm → generic
+7. Migrate Redis form to DashboardForm CRD as proof of concept
+8. Document CRD format for operators
 
 ## Open questions
 
-- Should `form` be part of `ApplicationDefinition` or a separate CRD (`DashboardFormOverride`)?
-- How to handle form validation beyond what OpenAPI schema provides?
-- Should sections support drag-and-drop reordering in a future form builder UI?
-- How to preview declarative form changes without applying CRD?
+- Should DashboardForm be cluster-scoped (one per app type) or namespace-scoped (per-tenant customization)?
+- How to handle form validation beyond OpenAPI schema (cross-field validation)?
+- Should there be a `DashboardView` CRD for detail page layout (tabs, sections) using the same pattern?
+- Plugin-provided blocks: how to discover available blocks? Expose in a UI?
