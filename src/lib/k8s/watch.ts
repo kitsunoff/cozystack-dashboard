@@ -6,13 +6,13 @@ import type { AppInstance } from "./types";
 import type { KubeList } from "./client";
 
 interface WatchEvent {
-  type: "ADDED" | "MODIFIED" | "DELETED";
+  type: "ADDED" | "MODIFIED" | "DELETED" | "BOOKMARK";
   object: AppInstance;
 }
 
 /**
  * Subscribe to K8s watch events via SSE and update React Query cache.
- * Requires an initial list fetch with resourceVersion for consistent watch.
+ * Connects once after initial fetch, does NOT reconnect on every resourceVersion change.
  */
 export function useK8sWatch(
   apiPath: string,
@@ -21,40 +21,52 @@ export function useK8sWatch(
   enabled: boolean = true
 ) {
   const queryClient = useQueryClient();
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const rvRef = useRef<string | undefined>(undefined);
+  const connectedRef = useRef(false);
+
+  // Track latest resourceVersion without triggering reconnects
+  useEffect(() => {
+    if (resourceVersion) {
+      rvRef.current = resourceVersion;
+    }
+  }, [resourceVersion]);
 
   useEffect(() => {
-    if (!enabled || !resourceVersion) return;
+    if (!enabled || !rvRef.current || connectedRef.current) return;
+    connectedRef.current = true;
 
-    const url = `/api/k8s-watch${apiPath}?resourceVersion=${resourceVersion}`;
+    const rv = rvRef.current;
+    const url = `/api/k8s-watch${apiPath}?resourceVersion=${rv}`;
     const es = new EventSource(url);
-    eventSourceRef.current = es;
 
     es.onmessage = (event) => {
       try {
         const watchEvent = JSON.parse(event.data) as WatchEvent;
+        if (watchEvent.type === "BOOKMARK") return;
         applyWatchEvent(queryClient, queryKey, watchEvent);
       } catch {
-        // Ignore parse errors (e.g. heartbeats)
+        // Ignore parse errors
       }
     };
 
     es.addEventListener("error", () => {
-      // Reconnect by invalidating the query — triggers refetch + new watch
       es.close();
+      connectedRef.current = false;
+      // Refetch to get fresh data + new resourceVersion, which will trigger new watch
       queryClient.invalidateQueries({ queryKey });
     });
 
     es.addEventListener("done", () => {
       es.close();
+      connectedRef.current = false;
       queryClient.invalidateQueries({ queryKey });
     });
 
     return () => {
       es.close();
-      eventSourceRef.current = null;
+      connectedRef.current = false;
     };
-  }, [apiPath, resourceVersion, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [apiPath, enabled, !!resourceVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 function applyWatchEvent(
@@ -84,13 +96,6 @@ function applyWatchEvent(
         break;
     }
 
-    return {
-      ...old,
-      items,
-      metadata: {
-        ...old.metadata,
-        resourceVersion: event.object.metadata.resourceVersion ?? old.metadata.resourceVersion,
-      },
-    };
+    return { ...old, items };
   });
 }
