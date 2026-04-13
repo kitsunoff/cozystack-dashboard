@@ -10,6 +10,8 @@ import {
 import { useNamespace } from "@/hooks/use-namespace";
 import { Header } from "@/components/layout/header";
 import { getCustomForm } from "@/components/form/registry";
+import { DeclarativeForm } from "@/components/form/declarative";
+import { useDashboardForm } from "@/lib/k8s/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import "@/components/form/custom";
@@ -33,6 +35,7 @@ function EditInstanceContent({
   const appDefName = panel?.metadata.name ?? "";
   const { data: appDef, isLoading: appDefLoading } =
     useApplicationDefinition(appDefName);
+  const dashboardForm = useDashboardForm(plural);
 
   const backHref = `/${namespace}/${plural}/${instanceName}`;
   const isLoading = panelsLoading || instanceLoading || appDefLoading;
@@ -104,9 +107,22 @@ function EditInstanceContent({
               editName={instanceName}
               editValues={spec}
             />
+          ) : dashboardForm && schema ? (
+            <DeclarativeForm
+              formSpec={dashboardForm.spec}
+              plural={plural}
+              namespace={namespace}
+              apiGroup={panel.spec.apiGroup}
+              apiVersion={panel.spec.apiVersion}
+              kind={appDef?.spec.application.kind ?? panel.spec.name}
+              backHref={backHref}
+              openAPISchema={schema}
+              editName={instanceName}
+              editValues={spec}
+            />
           ) : (
             <p className="text-sm text-muted-foreground">
-              No custom form available for editing this resource.
+              No form available for editing this resource.
             </p>
           )}
         </div>
