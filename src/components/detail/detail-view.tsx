@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatAge } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { LiveAge } from "@/components/ui/live-age";
 import type { AppInstance } from "@/lib/k8s/types";
 import type { TabDef } from "@/components/registry";
 import { getStatusRenderer } from "@/components/registry";
@@ -31,7 +32,7 @@ export function DetailView({ instance, plural, namespace, tabs }: DetailViewProp
         <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
           <span>{instance.metadata.namespace}</span>
           <span>·</span>
-          <span>Created {formatAge(instance.metadata.creationTimestamp)} ago</span>
+          <span>Created <LiveAge timestamp={instance.metadata.creationTimestamp} /> ago</span>
           {instance.metadata.resourceVersion && (
             <>
               <span>·</span>

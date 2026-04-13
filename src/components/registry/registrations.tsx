@@ -10,7 +10,7 @@ import type { AppInstance } from "@/lib/k8s/types";
 import { k8sPatch } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 import { Power, PowerOff, RotateCw } from "lucide-react";
-import { formatAge } from "@/lib/utils";
+import { LiveAge } from "@/components/ui/live-age";
 
 // --- Helpers ---
 
@@ -73,7 +73,7 @@ function vmStatus(i: AppInstance) {
 const ageColumn: ColumnDef = {
   key: "age",
   label: "Age",
-  render: (i) => <span className="text-sm text-muted-foreground">{formatAge(i.metadata.creationTimestamp)}</span>,
+  render: (i) => <LiveAge timestamp={i.metadata.creationTimestamp} className="text-sm text-muted-foreground" />,
 };
 
 // --- K8s tabs ---
