@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FormProvider, useFormContext } from "@/components/form/form-context";
 import { k8sCreate, k8sPatch } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
+import { deepMerge } from "@/lib/utils";
 
 interface WizardShellProps {
   schema: Record<string, unknown>;
@@ -171,26 +172,3 @@ function buildDefaults(schema: Record<string, unknown>): Record<string, unknown>
   return result;
 }
 
-function deepMerge(
-  target: Record<string, unknown>,
-  source: Record<string, unknown>
-): Record<string, unknown> {
-  const result = { ...target };
-  for (const key of Object.keys(source)) {
-    if (
-      typeof result[key] === "object" &&
-      result[key] !== null &&
-      typeof source[key] === "object" &&
-      source[key] !== null &&
-      !Array.isArray(result[key])
-    ) {
-      result[key] = deepMerge(
-        result[key] as Record<string, unknown>,
-        source[key] as Record<string, unknown>
-      );
-    } else {
-      result[key] = source[key];
-    }
-  }
-  return result;
-}

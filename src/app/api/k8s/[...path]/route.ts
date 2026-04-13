@@ -3,6 +3,24 @@ import https from "https";
 import http from "http";
 import { getKubeConfig, getHttpsAgent } from "@/lib/k8s/server";
 
+// Allowed K8s API path prefixes — block access to secrets, nodes, etc.
+const ALLOWED_PREFIXES = [
+  "/apis/apps.cozystack.io/",
+  "/apis/dashboard.cozystack.io/",
+  "/apis/cozystack.io/",
+  "/apis/authorization.k8s.io/v1/selfsubjectrulesreviews",
+  "/apis/cluster.x-k8s.io/",
+  "/api/v1/namespaces",
+  "/api/v1/namespaces/",  // events: /api/v1/namespaces/{ns}/events
+];
+
+const MAX_BODY_SIZE = 1_048_576; // 1 MB
+const REQUEST_TIMEOUT = 30_000;  // 30 seconds
+
+function isPathAllowed(path: string): boolean {
+  return ALLOWED_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
@@ -42,10 +60,19 @@ async function proxyToK8s(
   request: NextRequest,
   { path }: { path: string[] }
 ) {
+  const k8sPath = "/" + path.join("/");
+
+  // Path allowlist check
+  if (!isPathAllowed(k8sPath)) {
+    return NextResponse.json(
+      { error: "Forbidden", message: `Access to ${k8sPath} is not allowed` },
+      { status: 403 }
+    );
+  }
+
   const config = getKubeConfig();
   const agent = getHttpsAgent();
 
-  const k8sPath = "/" + path.join("/");
   const searchParams = request.nextUrl.searchParams.toString();
   const fullPath = searchParams ? `${k8sPath}?${searchParams}` : k8sPath;
   const url = new URL(fullPath, config.server);
@@ -63,9 +90,16 @@ async function proxyToK8s(
     headers["Content-Type"] = contentType;
   }
 
+  // Request body with size limit
   let body: string | undefined;
   if (request.method !== "GET" && request.method !== "HEAD") {
     body = await request.text();
+    if (body.length > MAX_BODY_SIZE) {
+      return NextResponse.json(
+        { error: "Request body too large", maxSize: MAX_BODY_SIZE },
+        { status: 413 }
+      );
+    }
   }
 
   try {
@@ -74,6 +108,7 @@ async function proxyToK8s(
       headers,
       body,
       agent,
+      timeout: REQUEST_TIMEOUT,
     });
 
     return new NextResponse(response.body, {
@@ -84,9 +119,10 @@ async function proxyToK8s(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    const status = message.includes("timeout") ? 504 : 502;
     return NextResponse.json(
       { error: "Failed to connect to Kubernetes API", details: message },
-      { status: 502 }
+      { status }
     );
   }
 }
@@ -98,6 +134,7 @@ function makeRequest(
     headers: Record<string, string>;
     body?: string;
     agent: https.Agent;
+    timeout: number;
   }
 ): Promise<{ status: number; body: string; contentType: string | null }> {
   return new Promise((resolve, reject) => {
@@ -109,6 +146,7 @@ function makeRequest(
         method: options.method,
         headers: options.headers,
         agent: url.protocol === "https:" ? options.agent : undefined,
+        timeout: options.timeout,
       },
       (res) => {
         const chunks: Buffer[] = [];
@@ -122,6 +160,11 @@ function makeRequest(
         });
       }
     );
+
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Request timeout"));
+    });
 
     req.on("error", reject);
 
