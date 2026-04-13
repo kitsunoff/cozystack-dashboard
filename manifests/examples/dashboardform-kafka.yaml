@@ -1,0 +1,33 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: kafka-form
+spec:
+  target:
+    plural: kafkas
+  sections:
+    - id: kafka
+      title: Kafka
+      blocks:
+        - block: resources-picker
+          path: kafka.resourcesPreset
+        - block: storage-picker
+          path: kafka.size
+        - block: replicas-picker
+          path: kafka.replicas
+    - id: zookeeper
+      title: ZooKeeper
+      blocks:
+        - block: resources-picker
+          path: zookeeper.resourcesPreset
+        - block: storage-picker
+          path: zookeeper.size
+        - block: replicas-picker
+          path: zookeeper.replicas
+    - id: access
+      title: Access
+      blocks:
+        - block: boolean-toggle
+          props:
+            field: external
+            description: "Enable external access from outside the cluster"

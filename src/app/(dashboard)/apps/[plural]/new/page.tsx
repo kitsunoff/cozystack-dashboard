@@ -12,6 +12,8 @@ import { useNamespace } from "@/hooks/use-namespace";
 import { Header } from "@/components/layout/header";
 import { SchemaForm } from "@/components/form/schema-form";
 import { getCustomForm } from "@/components/form/registry";
+import { DeclarativeForm } from "@/components/form/declarative";
+import { useDashboardForm } from "@/lib/k8s/hooks";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CFOSpec, CFPSpec } from "@/lib/schema/types";
@@ -31,6 +33,7 @@ function CreateInstanceContent({ plural }: { plural: string }) {
   const appDefName = panel?.metadata.name ?? "";
   const { data: appDef, isLoading: appDefLoading } =
     useApplicationDefinition(appDefName);
+  const dashboardForm = useDashboardForm(plural);
 
   const isLoading = panelsLoading || cfoLoading || cfpLoading || appDefLoading;
 
@@ -74,7 +77,7 @@ function CreateInstanceContent({ plural }: { plural: string }) {
     }
   }
 
-  // Check for custom form first
+  // Form resolution: custom → declarative → generic
   const CustomForm = getCustomForm(plural);
 
   return (
@@ -101,6 +104,17 @@ function CreateInstanceContent({ plural }: { plural: string }) {
               kind={appDef?.spec.application.kind ?? panel.spec.name}
               backHref={backHref}
               openAPISchema={schema ?? undefined}
+            />
+          ) : dashboardForm && schema ? (
+            <DeclarativeForm
+              formSpec={dashboardForm.spec}
+              plural={plural}
+              namespace={namespace}
+              apiGroup={panel.spec.apiGroup}
+              apiVersion={panel.spec.apiVersion}
+              kind={appDef?.spec.application.kind ?? panel.spec.name}
+              backHref={backHref}
+              openAPISchema={schema}
             />
           ) : schema ? (
             <GenericForm

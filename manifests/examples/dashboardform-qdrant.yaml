@@ -1,0 +1,24 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: qdrant-form
+spec:
+  target:
+    plural: qdrants
+  sections:
+    - id: resources
+      title: Resources
+      blocks:
+        - resources-picker
+        - storage-picker
+    - id: scaling
+      title: Scaling
+      blocks:
+        - replicas-picker
+    - id: access
+      title: Access
+      blocks:
+        - block: boolean-toggle
+          props:
+            field: external
+            description: "Enable external access from outside the cluster"

@@ -1,0 +1,116 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: mariadb-form
+spec:
+  target:
+    plural: mariadbs
+  sections:
+    - id: version
+      title: Version
+      blocks:
+        - block: enum-picker
+          props:
+            field: version
+            display: buttons
+    - id: resources
+      title: Resources
+      blocks:
+        - resources-picker
+        - storage-picker
+    - id: scaling
+      title: Scaling
+      blocks:
+        - replicas-picker
+    - id: users
+      title: Users
+      blocks:
+        - access-matrix
+    - id: bootstrap
+      title: Bootstrap
+      blocks:
+        - block: boolean-toggle
+          path: bootstrap
+          props:
+            field: enabled
+            description: "Restore from a backup"
+        - block: text-input
+          path: bootstrap
+          props:
+            field: oldName
+            placeholder: "previous-cluster-name"
+          showIf:
+            path: bootstrap.enabled
+            value: true
+        - block: text-input
+          path: bootstrap
+          props:
+            field: recoveryTime
+            placeholder: "2026-01-01T00:00:00Z (empty = latest)"
+          showIf:
+            path: bootstrap.enabled
+            value: true
+    - id: access
+      title: Access
+      blocks:
+        - block: boolean-toggle
+          props:
+            field: external
+            description: "Enable external access from outside the cluster"
+    - id: backup
+      title: Backup
+      blocks:
+        - block: boolean-toggle
+          path: backup
+          props:
+            field: enabled
+            description: "Enable automated backups"
+        - block: text-input
+          path: backup
+          props:
+            field: schedule
+            placeholder: "0 2 * * * *"
+          showIf:
+            path: backup.enabled
+            value: true
+        - block: text-input
+          path: backup
+          props:
+            field: destinationPath
+            placeholder: "s3://bucket/path/"
+          showIf:
+            path: backup.enabled
+            value: true
+        - block: text-input
+          path: backup
+          props:
+            field: retentionPolicy
+            placeholder: "30d"
+          showIf:
+            path: backup.enabled
+            value: true
+        - block: text-input
+          path: backup
+          props:
+            field: endpointURL
+            placeholder: "http://minio:9000"
+          showIf:
+            path: backup.enabled
+            value: true
+        - block: text-input
+          path: backup
+          props:
+            field: s3AccessKey
+            placeholder: "access-key"
+          showIf:
+            path: backup.enabled
+            value: true
+        - block: text-input
+          path: backup
+          props:
+            field: s3SecretKey
+            placeholder: "secret-key"
+            type: password
+          showIf:
+            path: backup.enabled
+            value: true

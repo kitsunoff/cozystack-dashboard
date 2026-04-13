@@ -1,0 +1,27 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: vpn-form
+spec:
+  target:
+    plural: vpns
+  sections:
+    - id: resources
+      title: Resources
+      blocks:
+        - resources-picker
+    - id: scaling
+      title: Scaling
+      blocks:
+        - replicas-picker
+    - id: users
+      title: Users
+      blocks:
+        - users-list
+    - id: access
+      title: Access
+      blocks:
+        - block: boolean-toggle
+          props:
+            field: external
+            description: "Enable external access from outside the cluster"

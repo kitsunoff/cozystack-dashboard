@@ -22,6 +22,7 @@ export const endpoints = {
   customFormsPrefills: () => `${DASHBOARD_BASE}/customformsprefills`,
   cfoMapping: () => `${DASHBOARD_BASE}/cfomappings/cfomapping`,
   customColumnsOverrides: () => `${DASHBOARD_BASE}/customcolumnsoverrides`,
+  dashboardForms: () => `${DASHBOARD_BASE}/dashboardforms`,
 
   // Application instances (namespaced)
   instances: (plural: string, namespace: string) =>
@@ -53,6 +54,9 @@ export const endpoints = {
   // Core API resources
   namespaces: () => "/api/v1/namespaces",
   events: (namespace: string) => `/api/v1/namespaces/${namespace}/events`,
+
+  // Storage
+  storageClasses: () => "/apis/storage.k8s.io/v1/storageclasses",
 
   // Cluster API resources
   machineDeployments: (namespace: string) =>

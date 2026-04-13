@@ -1,0 +1,12 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: bucket-form
+spec:
+  target:
+    plural: buckets
+  sections:
+    - id: users
+      title: Users
+      blocks:
+        - users-list

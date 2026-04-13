@@ -1,0 +1,35 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: rabbitmq-form
+spec:
+  target:
+    plural: rabbitmqs
+  sections:
+    - id: version
+      title: Version
+      blocks:
+        - block: enum-picker
+          props:
+            field: version
+            display: buttons
+    - id: resources
+      title: Resources
+      blocks:
+        - resources-picker
+        - storage-picker
+    - id: scaling
+      title: Scaling
+      blocks:
+        - replicas-picker
+    - id: users
+      title: Users
+      blocks:
+        - users-list
+    - id: access
+      title: Access
+      blocks:
+        - block: boolean-toggle
+          props:
+            field: external
+            description: "Enable external access from outside the cluster"

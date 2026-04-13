@@ -1,0 +1,18 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: foundationdb-form
+spec:
+  target:
+    plural: foundationdbs
+  sections:
+    - id: resources
+      title: Resources
+      blocks:
+        - resources-picker
+    - id: backup
+      title: Backup
+      blocks:
+        - block: boolean-toggle
+          path: backup
+          props: { field: enabled, description: "Enable automated backups" }

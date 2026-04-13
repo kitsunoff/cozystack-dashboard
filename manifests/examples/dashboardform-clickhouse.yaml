@@ -1,0 +1,45 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: clickhouse-form
+spec:
+  target:
+    plural: clickhouses
+  sections:
+    - id: resources
+      title: Resources
+      blocks:
+        - resources-picker
+        - storage-picker
+    - id: scaling
+      title: Scaling
+      blocks:
+        - replicas-picker
+    - id: users
+      title: Users
+      blocks:
+        - users-list
+    - id: backup
+      title: Backup
+      blocks:
+        - block: boolean-toggle
+          path: backup
+          props:
+            field: enabled
+            description: "Enable automated backups"
+        - block: text-input
+          path: backup
+          props:
+            field: schedule
+            placeholder: "0 2 * * * *"
+          showIf:
+            path: backup.enabled
+            value: true
+        - block: text-input
+          path: backup
+          props:
+            field: destinationPath
+            placeholder: "s3://bucket/path/"
+          showIf:
+            path: backup.enabled
+            value: true
