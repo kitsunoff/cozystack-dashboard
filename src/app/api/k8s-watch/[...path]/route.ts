@@ -30,6 +30,26 @@ export async function GET(
     start(controller) {
       const encoder = new TextEncoder();
       const reqModule = url.protocol === "https:" ? https : http;
+      let closed = false;
+
+      function send(text: string) {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(text));
+        } catch {
+          closed = true;
+        }
+      }
+
+      function close() {
+        if (closed) return;
+        closed = true;
+        try {
+          controller.close();
+        } catch {
+          // Already closed
+        }
+      }
 
       const k8sReq = reqModule.request(
         url,
@@ -40,10 +60,8 @@ export async function GET(
         },
         (res) => {
           if (res.statusCode !== 200) {
-            controller.enqueue(
-              encoder.encode(`event: error\ndata: ${JSON.stringify({ status: res.statusCode })}\n\n`)
-            );
-            controller.close();
+            send(`event: error\ndata: ${JSON.stringify({ status: res.statusCode })}\n\n`);
+            close();
             return;
           }
 
@@ -52,47 +70,37 @@ export async function GET(
           res.on("data", (chunk: Buffer) => {
             buffer += chunk.toString("utf-8");
 
-            // K8s watch sends newline-delimited JSON
             const lines = buffer.split("\n");
             buffer = lines.pop() ?? "";
 
             for (const line of lines) {
               if (!line.trim()) continue;
-              // Convert to SSE format
-              controller.enqueue(
-                encoder.encode(`data: ${line}\n\n`)
-              );
+              send(`data: ${line}\n\n`);
             }
           });
 
           res.on("end", () => {
             if (buffer.trim()) {
-              controller.enqueue(
-                encoder.encode(`data: ${buffer}\n\n`)
-              );
+              send(`data: ${buffer}\n\n`);
             }
-            controller.enqueue(encoder.encode("event: done\ndata: {}\n\n"));
-            controller.close();
+            send("event: done\ndata: {}\n\n");
+            close();
           });
 
           res.on("error", () => {
-            controller.enqueue(
-              encoder.encode(`event: error\ndata: ${JSON.stringify({ error: "stream error" })}\n\n`)
-            );
-            controller.close();
+            send(`event: error\ndata: ${JSON.stringify({ error: "stream error" })}\n\n`);
+            close();
           });
         }
       );
 
       k8sReq.on("error", () => {
-        controller.enqueue(
-          encoder.encode(`event: error\ndata: ${JSON.stringify({ error: "connection failed" })}\n\n`)
-        );
-        controller.close();
+        send(`event: error\ndata: ${JSON.stringify({ error: "connection failed" })}\n\n`);
+        close();
       });
 
-      // Close K8s connection when client disconnects
       request.signal.addEventListener("abort", () => {
+        closed = true;
         k8sReq.destroy();
       });
 
