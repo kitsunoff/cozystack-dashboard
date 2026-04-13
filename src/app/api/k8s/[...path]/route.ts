@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import https from "https";
 import http from "http";
-import { getKubeConfig, getHttpsAgent } from "@/lib/k8s/server";
+import { getKubeConfig, getHttpsAgent, resolveToken } from "@/lib/k8s/server";
 
 // Access control is delegated to Kubernetes RBAC — the proxy forwards
 // requests with the configured token, and K8s API returns 403 if the
@@ -57,12 +57,13 @@ async function proxyToK8s(
   const fullPath = searchParams ? `${k8sPath}?${searchParams}` : k8sPath;
   const url = new URL(fullPath, config.server);
 
+  const token = resolveToken(request);
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
 
-  if (config.token) {
-    headers["Authorization"] = `Bearer ${config.token}`;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const contentType = request.headers.get("content-type");

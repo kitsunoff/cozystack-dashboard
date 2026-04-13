@@ -167,6 +167,21 @@ export function getHttpsAgent(): https.Agent {
   return cachedAgent;
 }
 
+/**
+ * Resolve the Bearer token for a K8s API request.
+ * Priority: user token from oauth2proxy > configured SA/kubeconfig token.
+ */
+export function resolveToken(incomingRequest?: { headers: { get(name: string): string | null } }): string | null {
+  // User token forwarded by oauth2proxy
+  const userToken =
+    incomingRequest?.headers.get("x-forwarded-access-token") ||
+    incomingRequest?.headers.get("x-auth-request-access-token");
+  if (userToken) return userToken;
+
+  // Fallback to configured token (SA or kubeconfig)
+  return getKubeConfig().token;
+}
+
 function readInClusterToken(): string | null {
   const tokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token";
   try {
