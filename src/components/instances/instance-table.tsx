@@ -215,17 +215,9 @@ function RowActions({
     setDeleting(true);
     try {
       await k8sDelete(endpoints.instance(plural, namespace, name));
-      // Optimistically remove from cache
-      queryClient.setQueryData(
-        ["instances", plural, namespace],
-        (old: { items: AppInstance[] } | undefined) => {
-          if (!old) return old;
-          return { ...old, items: old.items.filter((i) => i.metadata.name !== name) };
-        }
-      );
       setOpen(false);
-      // Also refetch to sync with server state
-      await queryClient.invalidateQueries({ queryKey: ["instances", plural] });
+      // Watch will pick up the deletionTimestamp → status shows "Deleting"
+      // Then DELETED event will remove the row
     } catch {
       setDeleting(false);
     }

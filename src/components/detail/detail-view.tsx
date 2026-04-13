@@ -74,6 +74,15 @@ export function DetailView({ instance, plural, namespace, tabs }: DetailViewProp
 }
 
 function DefaultStatus({ instance }: { instance: AppInstance }) {
+  if (instance.metadata.deletionTimestamp) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+        <span className="text-sm text-red-700 dark:text-red-400 font-medium">Deleting</span>
+      </div>
+    );
+  }
+
   const ready = instance.status?.conditions?.find((c) => c.type === "Ready");
   const isReady = ready?.status === "True";
 
