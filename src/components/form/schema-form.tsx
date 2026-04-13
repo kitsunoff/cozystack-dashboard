@@ -12,6 +12,7 @@ import { walkSchema, collectVisibleFields } from "@/lib/schema/walker";
 import { applyOverrides } from "@/lib/schema/cfo-merger";
 import { buildPrefillValues } from "@/lib/schema/cfp-prefill";
 import { k8sCreate } from "@/lib/k8s/client";
+import { deepMerge } from "@/lib/utils";
 import { endpoints } from "@/lib/k8s/endpoints";
 import type { SchemaNode, CFOSpec, CFPSpec } from "@/lib/schema/types";
 
@@ -200,26 +201,3 @@ function buildDefaultsFromSchema(node: SchemaNode): Record<string, unknown> {
   return result;
 }
 
-function deepMerge(
-  target: Record<string, unknown>,
-  source: Record<string, unknown>
-): Record<string, unknown> {
-  const result = { ...target };
-  for (const key of Object.keys(source)) {
-    if (
-      typeof result[key] === "object" &&
-      result[key] !== null &&
-      typeof source[key] === "object" &&
-      source[key] !== null &&
-      !Array.isArray(result[key])
-    ) {
-      result[key] = deepMerge(
-        result[key] as Record<string, unknown>,
-        source[key] as Record<string, unknown>
-      );
-    } else {
-      result[key] = source[key];
-    }
-  }
-  return result;
-}

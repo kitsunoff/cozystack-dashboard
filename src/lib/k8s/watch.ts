@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AppInstance } from "./types";
 import type { KubeList } from "./client";
@@ -23,6 +23,7 @@ export function useK8sWatch(
   const queryClient = useQueryClient();
   const rvRef = useRef<string | undefined>(undefined);
   const connectedRef = useRef(false);
+  const backoffRef = useRef(1000); // Start at 1s, max 30s
 
   // Track latest resourceVersion without triggering reconnects
   useEffect(() => {
@@ -49,11 +50,19 @@ export function useK8sWatch(
       }
     };
 
+    es.onopen = () => {
+      backoffRef.current = 1000; // Reset backoff on successful connection
+    };
+
     es.addEventListener("error", () => {
       es.close();
       connectedRef.current = false;
-      // Refetch to get fresh data + new resourceVersion, which will trigger new watch
-      queryClient.invalidateQueries({ queryKey });
+      // Exponential backoff before reconnect
+      const delay = backoffRef.current;
+      backoffRef.current = Math.min(delay * 2, 30_000);
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey });
+      }, delay);
     });
 
     es.addEventListener("done", () => {
