@@ -88,7 +88,7 @@ function ServiceCard({ service, namespace }: { service: ServiceInstances; namesp
     <div className="rounded-xl border bg-card p-4 transition-all hover:ring-1 hover:ring-foreground/10">
       {/* Header: icon + service name */}
       <Link
-        href={`/apps/${panel.spec.plural}?namespace=${namespace}`}
+        href={`/${namespace}/${panel.spec.plural}`}
         className="flex items-center gap-3 mb-3"
       >
         <div
@@ -118,7 +118,7 @@ function ServiceCard({ service, namespace }: { service: ServiceInstances; namesp
         {visible.map((inst, i) => (
           <span key={inst.metadata.name}>
             <Link
-              href={`/apps/${panel.spec.plural}/${inst.metadata.name}?namespace=${namespace}`}
+              href={`/${namespace}/${panel.spec.plural}/${inst.metadata.name}`}
               className="hover:text-foreground hover:underline"
             >
               {inst.metadata.name}
@@ -128,7 +128,7 @@ function ServiceCard({ service, namespace }: { service: ServiceInstances; namesp
         ))}
         {remaining > 0 && (
           <Link
-            href={`/apps/${panel.spec.plural}?namespace=${namespace}`}
+            href={`/${namespace}/${panel.spec.plural}`}
             className="text-muted-foreground/60 hover:text-foreground"
           >
             +{remaining} more

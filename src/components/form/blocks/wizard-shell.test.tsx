@@ -5,8 +5,9 @@ import { WizardShell } from "./wizard-shell";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => "/apps/postgreses/new",
-  useSearchParams: () => new URLSearchParams("namespace=tenant-root"),
+  usePathname: () => "/tenant-root/postgreses/new",
+  useParams: () => ({ namespace: "tenant-root", plural: "postgreses" }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const queryClient = new QueryClient();
@@ -41,7 +42,7 @@ describe("WizardShell", () => {
           apiGroup="apps.cozystack.io"
           apiVersion="v1alpha1"
           kind="Postgres"
-          backHref="/apps/postgreses"
+          backHref="/tenant-root/postgreses"
           submitLabel="PostgreSQL"
         >
           <div>child content</div>

@@ -188,19 +188,21 @@ registerDetailActions("vminstances", [
 
 Two route groups with different layouts:
 
-- `(tenant-select)` — no sidebar, used by `/tenants`
-- `(dashboard)` — sidebar + main area, used by `/platform-apps`, `/overview`, `/apps/*`
+- `(tenant-select)` — no sidebar, tenant selection at `/`
+- `(dashboard)` — sidebar + main area, namespace in URL path
 
 ```text
-/                              → redirect to /tenants
-/tenants                       → tenant (namespace) selection, no sidebar
-/platform-apps                   → Platform Apps catalog with tag filters and search
-/overview                        → all instances grouped by service type with search
-/apps/[plural]                 → instance list with metrics, table, events
-/apps/[plural]/new             → create form (custom or generic)
-/apps/[plural]/[name]          → instance detail with tabs
-/api/k8s/[...path]             → proxy to kube-apiserver
+/                                    → tenant selection (namespace picker)
+/{namespace}                         → overview (all instances grouped by service)
+/{namespace}/platform-apps           → Platform Apps catalog
+/{namespace}/{plural}                → instance list with metrics, table, events
+/{namespace}/{plural}/new            → create form (custom or declarative)
+/{namespace}/{plural}/{name}         → instance detail with tabs
+/{namespace}/{plural}/{name}/edit    → edit form
+/api/k8s/[...path]                  → proxy to kube-apiserver
 ```
+
+Namespace is part of the URL path, not a query parameter.
 
 Namespace is carried as `?namespace=xxx` URL search param. Only `tenant-*` namespaces are shown.
 

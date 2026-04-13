@@ -28,7 +28,7 @@ function CreateInstanceContent({ plural }: { plural: string }) {
   const { data: cfpList, isLoading: cfpLoading } = useCustomFormsPrefills();
 
   const panel = panels?.find((mp) => mp.spec.plural === plural);
-  const backHref = `/apps/${plural}?namespace=${namespace}`;
+  const backHref = `/${namespace}/${plural}`;
 
   const appDefName = panel?.metadata.name ?? "";
   const { data: appDef, isLoading: appDefLoading } =
@@ -58,7 +58,7 @@ function CreateInstanceContent({ plural }: { plural: string }) {
         <Header title="Not Found" />
         <div className="flex-1 overflow-y-auto p-8">
           <p className="text-sm text-muted-foreground">Application not found.</p>
-          <Link href="/platform-apps">
+          <Link href={`/${namespace}/platform-apps`}>
             <Button variant="ghost" size="sm" className="mt-2">
               Back to Platform Apps
             </Button>

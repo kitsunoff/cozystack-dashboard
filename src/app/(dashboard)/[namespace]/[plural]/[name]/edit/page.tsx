@@ -34,7 +34,7 @@ function EditInstanceContent({
   const { data: appDef, isLoading: appDefLoading } =
     useApplicationDefinition(appDefName);
 
-  const backHref = `/apps/${plural}/${instanceName}?namespace=${namespace}`;
+  const backHref = `/${namespace}/${plural}/${instanceName}`;
   const isLoading = panelsLoading || instanceLoading || appDefLoading;
 
   if (isLoading) {
