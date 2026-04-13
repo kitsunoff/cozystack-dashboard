@@ -293,18 +293,86 @@ DashboardForm CRD (fetched by dashboard)
   WizardShell wraps everything (name, submit, error, edit mode)
 ```
 
+## Error handling
+
+### Unknown block ID
+
+Block ID not found in BlockRegistry (built-in or plugin).
+
+- **Always** render a visible warning box in the form:
+  ```
+  ⚠ Unknown block "gpu-selector" — is the plugin installed?
+  ```
+- This is a CRD configuration error — should never be silent.
+
+### Path not found in schema
+
+`path: kafka.replicas` but OpenAPI schema has no `kafka` property.
+
+- **Dev mode** (`NODE_ENV=development`): yellow warning box in the form:
+  ```
+  ⚠ Block "replicas-picker" at path "kafka.replicas": not found in schema
+  ```
+- **Prod mode**: `console.warn()`, block not rendered (same as current behavior — `schemaHas` returns false).
+
+### Uncovered fields (Advanced section)
+
+DashboardForm describes some fields but not all. Remaining schema fields must not disappear.
+
+The renderer collects all `path` values from DashboardForm blocks and computes uncovered fields:
+
+```
+Schema fields:  [version, replicas, resourcesPreset, size, storageClass, external, users, backup, postgresql, quorum]
+Covered by blocks: [version, replicas, resourcesPreset, size, storageClass, external]
+Uncovered:      [users, backup, postgresql, quorum]
+```
+
+Uncovered fields are rendered in an automatic **"Advanced"** collapsible section at the bottom, using generic field renderer:
+
+```
+┌─ General ──────────────────────────┐
+│  version-picker                    │
+└────────────────────────────────────┘
+┌─ Resources ────────────────────────┐
+│  resources-picker                  │
+│  storage-picker                    │
+└────────────────────────────────────┘
+┌─ Advanced (auto-generated) ──▾ ───┐
+│  users          { ... }            │
+│  backup         { ... }            │
+│  postgresql     { ... }            │
+│  quorum         { ... }            │
+└────────────────────────────────────┘
+```
+
+This ensures:
+- No data loss — all schema fields are accessible
+- Operators can incrementally describe forms — start with key fields, rest falls back to generic
+- `hideAdvanced: true` in DashboardForm spec suppresses the section if desired
+
+### Summary table
+
+| Error | Dev mode | Prod mode |
+|---|---|---|
+| Unknown block ID | Warning box in form | Warning box in form |
+| Path not in schema | Warning box in form | console.warn, block hidden |
+| Uncovered fields | "Advanced" section | "Advanced" section |
+| showIf path not in schema | Warning box in form | console.warn, block always visible |
+| Empty DashboardForm (no sections) | Entire form is "Advanced" | Entire form is "Advanced" |
+
 ## Priority / fallback chain
 
 When rendering a form for a resource:
 
 1. **Custom form** registered via `registerCustomForm(plural)` → highest priority, full React control
-2. **DashboardForm CRD** for this plural → declarative, generated from YAML
+2. **DashboardForm CRD** for this plural → declarative, generated from YAML + "Advanced" section for uncovered fields
 3. **Generic form** from OpenAPI schema + CFO/CFP → automatic fallback
 
 This means:
 - Existing custom forms (VM Instance, Kubernetes) keep working unchanged
 - Operators add DashboardForm CRDs for their applications — forms appear without code
 - Unknown applications with no DashboardForm still get a basic form from schema
+- Partially described DashboardForms still show all fields via "Advanced" section
 
 ## Relationship with existing CRDs
 
@@ -324,24 +392,26 @@ DashboardForm replaces the need for CFO in most cases — it provides more contr
 |---|---|---|---|
 | Form layout | Flat list + groups | Schema-driven (no layout) | Sections + fields |
 | Field types | Custom type system | JSON Schema types | Block IDs (reusable components) |
-| Conditional | `show_if` string expressions | CFO hidden field | `showFields` / `showIf` |
+| Conditional | `show_if` string expressions | CFO hidden field | `showIf` with explicit paths |
 | Defaults | Duplicated in questions | In OpenAPI schema | From schema (no duplication) |
 | Validation | `min`/`max`/`required` | JSON Schema | From schema (no duplication) |
 | Extensibility | No | CFO/CFP CRDs | Plugin blocks + CRD |
-| Nested config | Dot-notation | Native objects | `basePath` |
+| Nested config | Dot-notation | Native objects | Explicit dot-paths |
 | Lifecycle | Part of chart | Part of platform | Independent CRD |
 | RBAC | Chart publish access | ApplicationDefinition access | Separate DashboardForm access |
 
 ## Implementation steps
 
-1. Define TypeScript types: `DashboardFormSpec`, `SectionSpec`, `FieldSpec`
+1. Define TypeScript types: `DashboardFormSpec`, `SectionSpec`, `BlockEntry`
 2. Add `dashboardforms` to K8s endpoints and hooks (`useDashboardForm(plural)`)
-3. Create `BlockRegistry` — maps block IDs to React components, register built-ins
+3. Create `BlockRegistry` — maps block IDs to React components, register all built-ins
 4. Create `DeclarativeForm` component that renders from `DashboardFormSpec`
-5. Create `ConditionalSection` / `ConditionalField` wrappers
-6. Update form resolution in new/edit page: custom → DashboardForm → generic
-7. Migrate Redis form to DashboardForm CRD as proof of concept
-8. Document CRD format for operators
+5. Implement `showIf` evaluation against FormContext values
+6. Implement "Advanced" section — compute uncovered fields, render with generic blocks
+7. Implement error display (unknown block, missing path) with dev/prod modes
+8. Update form resolution in new/edit page: custom → DashboardForm → generic
+9. Migrate Redis form to DashboardForm CRD as proof of concept
+10. Document CRD format for operators
 
 ## Open questions
 
@@ -349,3 +419,4 @@ DashboardForm replaces the need for CFO in most cases — it provides more contr
 - How to handle form validation beyond OpenAPI schema (cross-field validation)?
 - Should there be a `DashboardView` CRD for detail page layout (tabs, sections) using the same pattern?
 - Plugin-provided blocks: how to discover available blocks? Expose in a UI?
+- Should "Advanced" section be opt-out (`hideAdvanced: true`) or opt-in?
