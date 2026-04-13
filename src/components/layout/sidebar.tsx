@@ -50,6 +50,7 @@ export function Sidebar() {
   const { namespace } = useNamespace();
 
   const isPlatformApps = pathname === "/platform-apps";
+  const isOverview = pathname === "/overview";
 
   // Build plural → category map from ApplicationDefinitions
   const categoryMap = useMemo(() => {
@@ -100,6 +101,17 @@ export function Sidebar() {
           )}
         >
           Platform Apps
+        </Link>
+        <Link
+          href={`/overview?namespace=${namespace}`}
+          className={cn(
+            "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
+            isOverview
+              ? "bg-primary/10 text-primary font-medium border-l-2 border-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+          )}
+        >
+          Overview
         </Link>
       </div>
 
