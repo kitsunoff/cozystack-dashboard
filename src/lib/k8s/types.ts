@@ -6,6 +6,7 @@ export interface ObjectMeta {
   labels?: Record<string, string>;
   annotations?: Record<string, string>;
   creationTimestamp?: string;
+  deletionTimestamp?: string;
   uid?: string;
   resourceVersion?: string;
   ownerReferences?: OwnerReference[];

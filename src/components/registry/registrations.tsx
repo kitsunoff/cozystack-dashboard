@@ -37,6 +37,9 @@ function StatusRow({ dotColor, textColor, label, pulse }: { dotColor: string; te
 // --- Status renderers ---
 
 function defaultStatus(i: AppInstance) {
+  if (i.metadata.deletionTimestamp) {
+    return <StatusRow dotColor="bg-red-500" textColor="text-red-700 dark:text-red-400" label="Deleting" pulse />;
+  }
   const ready = i.status?.conditions?.find((c) => c.type === "Ready");
   if (!ready) {
     return <span className="inline-flex items-center rounded-4xl bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium">Unknown</span>;
@@ -47,6 +50,9 @@ function defaultStatus(i: AppInstance) {
 }
 
 function vmStatus(i: AppInstance) {
+  if (i.metadata.deletionTimestamp) {
+    return <StatusRow dotColor="bg-red-500" textColor="text-red-700 dark:text-red-400" label="Deleting" pulse />;
+  }
   const ready = i.status?.conditions?.find((c) => c.type === "Ready");
   const strategy = i.spec.runStrategy as string | undefined;
 
