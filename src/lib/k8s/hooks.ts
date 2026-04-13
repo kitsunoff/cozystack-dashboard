@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery, useQueries } from "@tanstack/react-query";
-import { k8sList, k8sGet, k8sCreate } from "./client";
+import { useQuery } from "@tanstack/react-query";
+import { k8sList, k8sGet, k8sCreate, k8sBatch } from "./client";
 import { endpoints } from "./endpoints";
 import type {
   MarketplacePanel,
@@ -40,23 +40,24 @@ export interface ServiceInstances {
 }
 
 export function useAllInstances(namespace: string, panels?: MarketplacePanel[]) {
-  const queries = useQueries({
-    queries: (panels ?? []).map((panel) => ({
-      queryKey: ["instances", panel.spec.plural, namespace],
-      queryFn: () =>
-        k8sList<AppInstance>(endpoints.instances(panel.spec.plural, namespace)),
-      enabled: !!namespace,
-    })),
+  const plurals = panels?.map((p) => p.spec.plural) ?? [];
+
+  const { data: batchResult, isLoading } = useQuery({
+    queryKey: ["allInstances", namespace, plurals.join(",")],
+    queryFn: async () => {
+      const paths = plurals.map((p) => endpoints.instances(p, namespace));
+      return k8sBatch<AppInstance>(paths);
+    },
+    enabled: !!namespace && plurals.length > 0,
   });
 
-  const isLoading = queries.some((q) => q.isLoading);
   const data: ServiceInstances[] = [];
-
-  if (panels) {
-    for (let i = 0; i < panels.length; i++) {
-      const items = queries[i]?.data?.items ?? [];
-      if (items.length > 0) {
-        data.push({ panel: panels[i], instances: items });
+  if (panels && batchResult) {
+    for (const panel of panels) {
+      const path = endpoints.instances(panel.spec.plural, namespace);
+      const list = batchResult.get(path);
+      if (list && list.items.length > 0) {
+        data.push({ panel, instances: list.items });
       }
     }
   }
