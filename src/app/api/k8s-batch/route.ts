@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import https from "https";
 import http from "http";
-import { getKubeConfig, getHttpsAgent } from "@/lib/k8s/server";
+import { getKubeConfig, getHttpsAgent, resolveToken } from "@/lib/k8s/server";
 
 interface BatchRequest {
   paths: string[];
@@ -27,9 +27,10 @@ export async function POST(request: NextRequest) {
   const config = getKubeConfig();
   const agent = getHttpsAgent();
 
+  const token = resolveToken(request);
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (config.token) {
-    headers["Authorization"] = `Bearer ${config.token}`;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const results: BatchResultItem[] = await Promise.all(

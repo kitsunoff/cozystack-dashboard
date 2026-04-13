@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import https from "https";
 import http from "http";
-import { getKubeConfig, getHttpsAgent } from "@/lib/k8s/server";
+import { getKubeConfig, getHttpsAgent, resolveToken } from "@/lib/k8s/server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +20,12 @@ export async function GET(
   const fullPath = `${k8sPath}?${searchParams.toString()}`;
   const url = new URL(fullPath, config.server);
 
+  const token = resolveToken(request);
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
-  if (config.token) {
-    headers["Authorization"] = `Bearer ${config.token}`;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const stream = new ReadableStream({
