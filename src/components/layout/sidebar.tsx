@@ -49,8 +49,8 @@ export function Sidebar() {
   const { data: appDefs } = useApplicationDefinitions();
   const { namespace } = useNamespace();
 
-  const isPlatformApps = pathname === "/platform-apps";
-  const isOverview = pathname === "/overview";
+  const isPlatformApps = pathname === `/${namespace}/platform-apps`;
+  const isOverview = pathname === `/${namespace}`;
 
   // Build plural → category map from ApplicationDefinitions
   const categoryMap = useMemo(() => {
@@ -92,7 +92,7 @@ export function Sidebar() {
       {/* Platform Apps — top-level item */}
       <div className="px-3 pt-4 pb-2">
         <Link
-          href={`/platform-apps?namespace=${namespace}`}
+          href={`/${namespace}/platform-apps`}
           className={cn(
             "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
             isPlatformApps
@@ -103,7 +103,7 @@ export function Sidebar() {
           Platform Apps
         </Link>
         <Link
-          href={`/overview?namespace=${namespace}`}
+          href={`/${namespace}`}
           className={cn(
             "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
             isOverview
@@ -124,8 +124,8 @@ export function Sidebar() {
           <div key={category}>
             <SidebarGroup title={category} defaultOpen>
               {items.map((mp) => {
-                const href = `/apps/${mp.spec.plural}?namespace=${namespace}`;
-                const isActive = pathname === `/apps/${mp.spec.plural}`;
+                const href = `/${namespace}/${mp.spec.plural}`;
+                const isActive = pathname.startsWith(`/${namespace}/${mp.spec.plural}`);
                 return (
                   <Link
                     key={mp.metadata.name}

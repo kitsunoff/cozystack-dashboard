@@ -148,7 +148,7 @@ export function TenantCard({ namespace: ns }: TenantCardProps) {
           Created {formatDate(ns.creationTimestamp)}
         </p>
         <Button
-          onClick={() => router.push(`/platform-apps?namespace=${ns.name}`)}
+          onClick={() => router.push(`/${ns.name}`)}
         >
           Enter
           <ArrowRight data-icon="inline-end" />

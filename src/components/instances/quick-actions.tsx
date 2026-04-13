@@ -32,7 +32,7 @@ export function QuickActions({ plural, namespace, appName }: QuickActionsProps) 
       <div className="p-2 space-y-1">
         {/* Default create action */}
         <Link
-          href={`/apps/${plural}/new?namespace=${namespace}`}
+          href={`/${namespace}/${plural}/new`}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm bg-foreground text-background hover:bg-foreground/90 transition-colors"
         >
           <Plus className="h-4 w-4" />

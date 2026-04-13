@@ -44,7 +44,7 @@ export function DetailQuickActions({ instance, plural, namespace }: DetailQuickA
       <div className="p-2 space-y-1">
         {/* Default edit action */}
         <button
-          onClick={() => router.push(`/apps/${plural}/${instance.metadata.name}/edit?namespace=${namespace}`)}
+          onClick={() => router.push(`/${namespace}/${plural}/${instance.metadata.name}/edit`)}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm w-full text-left bg-foreground text-background hover:bg-foreground/90 transition-colors"
         >
           <Pencil className="h-4 w-4" />

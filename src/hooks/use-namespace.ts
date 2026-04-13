@@ -1,36 +1,30 @@
 "use client";
 
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useParams, useRouter, usePathname } from "next/navigation";
+import { useCallback } from "react";
 
-const NAMESPACE_PARAM = "namespace";
-
+/**
+ * Read namespace from URL path parameter.
+ * Routes: /{namespace}/..., namespace is the first path segment in dashboard.
+ */
 export function useNamespace() {
-  const searchParams = useSearchParams();
+  const params = useParams();
   const router = useRouter();
   const pathname = usePathname();
-  const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  const namespace = searchParams.get(NAMESPACE_PARAM) || "";
-
-  // Redirect to tenant selection if no namespace is set (only after hydration)
-  useEffect(() => {
-    if (hydrated && !namespace && pathname !== "/tenants") {
-      router.replace("/tenants");
-    }
-  }, [hydrated, namespace, pathname, router]);
+  const namespace = (params?.namespace as string) ?? "";
 
   const setNamespace = useCallback(
     (ns: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set(NAMESPACE_PARAM, ns);
-      router.push(`${pathname}?${params.toString()}`);
+      // Replace namespace segment in current path
+      if (namespace) {
+        const newPath = pathname.replace(`/${namespace}`, `/${ns}`);
+        router.push(newPath);
+      } else {
+        router.push(`/${ns}`);
+      }
     },
-    [searchParams, router, pathname]
+    [namespace, pathname, router]
   );
 
   return { namespace, setNamespace };

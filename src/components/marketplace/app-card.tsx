@@ -15,7 +15,7 @@ export function AppCard({ spec, namespace }: AppCardProps) {
   const tag = spec.tags[0];
 
   return (
-    <Link href={`/apps/${spec.plural}?namespace=${namespace}`}>
+    <Link href={`/${namespace}/${spec.plural}`}>
       <div className="group flex flex-col justify-between rounded-xl border bg-card p-5 h-full transition-all hover:border-foreground/20 hover:shadow-sm">
         {/* Header */}
         <div>

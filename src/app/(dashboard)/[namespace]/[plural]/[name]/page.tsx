@@ -51,7 +51,7 @@ function InstanceDetailContent({
         <div className="flex-1 overflow-y-auto p-8">
           <div className="max-w-5xl">
             <Link
-              href={`/apps/${plural}?namespace=${namespace}`}
+              href={`/${namespace}/${plural}`}
               className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-6"
             >
               &larr; All {appName} instances
@@ -77,7 +77,7 @@ function InstanceDetailContent({
         <div className="flex gap-8">
           <div className="flex-1 min-w-0">
             <Link
-              href={`/apps/${plural}?namespace=${namespace}`}
+              href={`/${namespace}/${plural}`}
               className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-6"
             >
               &larr; All {appName} instances

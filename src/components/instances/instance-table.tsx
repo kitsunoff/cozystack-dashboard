@@ -97,7 +97,7 @@ export function InstanceTable({
         <div className="text-sm text-muted-foreground mb-4">
           Create your first instance to get started
         </div>
-        <Link href={`/apps/${plural}/new?namespace=${namespace}`}>
+        <Link href={`/${namespace}/${plural}/new`}>
           <Button size="sm">Create {appName ?? "Instance"}</Button>
         </Link>
       </div>
@@ -152,7 +152,7 @@ export function InstanceTable({
               <TableRow key={instance.metadata.name} className="group">
                 <TableCell className="py-3">
                   <Link
-                    href={`/apps/${plural}/${instance.metadata.name}?namespace=${namespace}`}
+                    href={`/${namespace}/${plural}/${instance.metadata.name}`}
                     className="text-sm font-medium hover:underline"
                   >
                     {instance.metadata.name}
@@ -246,7 +246,7 @@ function RowActions({
             <button
               onClick={() => {
                 setOpen(false);
-                router.push(`/apps/${plural}/${name}?namespace=${namespace}`);
+                router.push(`/${namespace}/${plural}/${name}`);
               }}
               className="flex w-full px-3 py-1.5 text-sm text-left hover:bg-accent rounded-sm transition-colors"
             >
@@ -255,7 +255,7 @@ function RowActions({
             <button
               onClick={() => {
                 setOpen(false);
-                router.push(`/apps/${plural}/${name}/edit?namespace=${namespace}`);
+                router.push(`/${namespace}/${plural}/${name}/edit`);
               }}
               className="flex w-full px-3 py-1.5 text-sm text-left hover:bg-accent rounded-sm transition-colors"
             >
