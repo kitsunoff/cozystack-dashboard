@@ -85,6 +85,33 @@ export async function k8sDelete(apiPath: string): Promise<void> {
   await k8sFetch(apiPath, { method: "DELETE" });
 }
 
+// Batch multiple K8s API GET requests into one server call
+export async function k8sBatch<T>(
+  paths: string[]
+): Promise<Map<string, KubeList<T>>> {
+  const response = await fetch("/api/k8s-batch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ paths }),
+  });
+
+  if (!response.ok) {
+    throw new K8sError("Batch request failed", response.status);
+  }
+
+  const { results } = await response.json() as {
+    results: Array<{ path: string; status: number; body: KubeList<T> }>;
+  };
+
+  const map = new Map<string, KubeList<T>>();
+  for (const r of results) {
+    if (r.status >= 200 && r.status < 300) {
+      map.set(r.path, r.body);
+    }
+  }
+  return map;
+}
+
 export interface KubeList<T> {
   apiVersion: string;
   kind: string;
