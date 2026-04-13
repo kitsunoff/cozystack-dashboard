@@ -48,49 +48,79 @@ spec:
   sections:
     - id: general
       title: General
-      fields:
-        - key: version
-          block: version-picker
+      blocks:
+        - version-picker                  # short form: block ID, looks for fields at spec root
 
     - id: resources
       title: Resources
-      fields:
-        - key: resourcesPreset
-          block: resources-picker
-        - key: size
-          block: storage-picker
+      blocks:
+        - resources-picker                # → spec.resourcesPreset, spec.resources
+        - storage-picker                  # → spec.size, spec.storageClass
 
     - id: scaling
       title: Scaling
-      fields:
-        - key: replicas
-          block: replicas-picker
+      blocks:
+        - replicas-picker                 # → spec.replicas
 
     - id: access
       title: Access
-      fields:
-        - key: external
-          block: external-toggle
-          showFields:
-            when: true
-            fields: [externalMethod, externalPorts]
+      blocks:
+        - external-toggle                 # → spec.external
+        - block: generic
+          path: externalMethod
+          showIf:
+            path: external
+            value: true
+        - block: generic
+          path: externalPorts
+          showIf:
+            path: external
+            value: true
 
     - id: users
       title: Users & Databases
-      fields:
-        - key: users
-          block: users-list
-        - key: databases
-          block: generic
+      blocks:
+        - users-list                      # → spec.users
+        - block: generic
+          path: databases
 
     - id: backup
       title: Backup
-      fields:
-        - key: backup
-          block: backup-config
+      blocks:
+        - backup-config                   # → spec.backup.*
 ```
 
-### Example: Kafka (nested config with basePath)
+### Block syntax
+
+Each item in `blocks` is either a **string** (short form) or an **object** (full form):
+
+```yaml
+blocks:
+  # Short form — just block ID, finds its fields at spec root
+  - replicas-picker
+
+  # Full form — block ID + explicit path + options
+  - block: replicas-picker
+    path: kafka.replicas              # explicit dot-path in spec
+
+  # Full form — with conditional visibility
+  - block: generic
+    path: externalPorts
+    showIf:
+      path: external                  # full dot-path to check
+      value: true
+
+  # Full form — with field name remapping
+  - block: storage-picker
+    path: storage                     # spec.storage.*
+    fieldMap:
+      size: diskSize                  # block slot "size" → schema field "diskSize"
+      storageClass: sc                # block slot "storageClass" → schema field "sc"
+```
+
+All paths are **explicit, full dot-paths** in spec. No inheritance, no implicit basePath.
+
+### Example: Kafka (nested config)
 
 ```yaml
 apiVersion: dashboard.cozystack.io/v1alpha1
@@ -103,46 +133,39 @@ spec:
   sections:
     - id: kafka
       title: Kafka
-      fields:
-        - key: replicas
-          block: replicas-picker
-          basePath: [kafka]
-        - key: resourcesPreset
-          block: resources-picker
-          basePath: [kafka]
-        - key: size
-          block: storage-picker
-          basePath: [kafka]
+      blocks:
+        - block: resources-picker
+          path: kafka.resourcesPreset
+        - block: storage-picker
+          path: kafka.size
+        - block: replicas-picker
+          path: kafka.replicas
 
     - id: zookeeper
       title: ZooKeeper
-      fields:
-        - key: replicas
-          block: replicas-picker
-          basePath: [zookeeper]
-        - key: resourcesPreset
-          block: resources-picker
-          basePath: [zookeeper]
-        - key: size
-          block: storage-picker
-          basePath: [zookeeper]
+      blocks:
+        - block: resources-picker
+          path: zookeeper.resourcesPreset
+        - block: storage-picker
+          path: zookeeper.size
+        - block: replicas-picker
+          path: zookeeper.replicas
 
     - id: access
       title: Access
-      fields:
-        - key: external
-          block: external-toggle
+      blocks:
+        - external-toggle
 
     - id: topics
       title: Topics
-      fields:
-        - key: topics
-          block: generic
+      blocks:
+        - block: generic
+          path: topics
 ```
 
-### Example: Minimal form (inline annotation alternative)
+Every path is explicit: `kafka.replicas` = `spec.kafka.replicas`. No magic.
 
-For simple overrides, a DashboardForm can be very short:
+### Example: Minimal form
 
 ```yaml
 apiVersion: dashboard.cozystack.io/v1alpha1
@@ -155,50 +178,53 @@ spec:
   sections:
     - id: main
       title: Configuration
-      fields:
-        - key: resourcesPreset
-          block: resources-picker
-        - key: size
-          block: storage-picker
-        - key: replicas
-          block: replicas-picker
-        - key: external
-          block: external-toggle
+      blocks:
+        - resources-picker
+        - storage-picker
+        - replicas-picker
+        - external-toggle
 ```
 
-## Field definition
+Short form for standard Cozystack charts — blocks find their fields at spec root automatically.
+
+## Block definition (full form)
 
 ```yaml
-fields:
-  - key: string              # primary field key in spec (e.g. "replicas", "backup.enabled")
-    block: string             # block type to render (see built-in blocks)
-    title: string             # optional title override (default: from schema description)
-    basePath: [string]        # for nested config (e.g. ["kafka"] → spec.kafka.*)
-    fieldMap:                  # remap schema field names to block slots
-      slotName: schemaField   # e.g. { size: diskSize, storageClass: sc }
-    showFields:               # conditional visibility
-      when: any               # value that triggers showing
-      fields: [string]        # field keys to show/hide
-    hidden: boolean           # hide this field entirely
-    readOnly: boolean         # show but don't allow editing
+- block: string             # block type to render (see built-in blocks)
+  path: string              # explicit dot-path in spec (e.g. "kafka.replicas")
+  title: string             # optional title override
+  fieldMap:                 # remap schema field names to block slots
+    slotName: schemaField   # e.g. { size: diskSize, storageClass: sc }
+  showIf:                   # conditional visibility
+    path: string            # full dot-path to check
+    value: any              # value that makes this block visible
+  hidden: boolean           # hide this block entirely
+  readOnly: boolean         # show but don't allow editing
 ```
+
+### path resolution
+
+`path` tells the block where in the spec to read/write:
+
+| path | Schema location | Spec location |
+|---|---|---|
+| (none) | `schema.properties.*` | `spec.*` |
+| `kafka.replicas` | `schema.properties.kafka.properties.replicas` | `spec.kafka.replicas` |
+| `backup.enabled` | `schema.properties.backup.properties.enabled` | `spec.backup.enabled` |
 
 ### fieldMap: remapping field names
 
-Blocks expect standard field names (`size`, `storageClass`, `replicas`, etc.). When a chart uses non-standard names, `fieldMap` remaps them:
+When a chart uses non-standard field names:
 
 ```yaml
-# Chart uses "diskSize" instead of "size", "sc" instead of "storageClass"
-- key: diskSize
-  block: storage-picker
+- block: storage-picker
+  path: storage
   fieldMap:
-    size: diskSize
-    storageClass: sc
+    size: diskSize           # block looks for "diskSize" instead of "size"
+    storageClass: sc         # block looks for "sc" instead of "storageClass"
 ```
 
-The block reads `schemaHas(schema, "diskSize")` instead of `schemaHas(schema, "size")`, and writes to `spec.diskSize` instead of `spec.size`.
-
-Without `fieldMap`, blocks use their default field names — works for all standard Cozystack charts.
+Without `fieldMap`, blocks use default field names — zero config for standard charts.
 
 ## Section definition
 
@@ -209,9 +235,9 @@ sections:
     collapsible: boolean      # default false
     defaultOpen: boolean      # default true (when collapsible)
     showIf:                   # conditional section visibility
-      field: string           # field key to check
+      path: string            # full dot-path to check
       value: any              # value that makes section visible
-    fields: [...]
+    blocks: [...]
 ```
 
 ## Built-in block types
@@ -243,8 +269,8 @@ registerFormBlock("gpu-selector", GPUSelectorBlock);
 Referenced from CRD:
 
 ```yaml
-- key: gpus
-  block: gpu-selector
+- block: gpu-selector
+  path: gpus
 ```
 
 ## Rendering pipeline
@@ -256,12 +282,13 @@ DashboardForm CRD (fetched by dashboard)
         ↓
   DeclarativeForm component:
     For each section:
-      Evaluate showIf condition against FormContext values
-      For each field:
-        Look up block component by block ID
-        Extract schema slice using key + basePath
-        Evaluate showFields conditions
-        Render block with schema + basePath
+      Evaluate section showIf (check value at path in FormContext)
+      For each block entry:
+        If string → resolve block component, no path (root)
+        If object → resolve block component, parse dot-path
+        Evaluate block showIf
+        Split path into basePath + fieldKey for schema lookup
+        Render block with schema slice + basePath
         ↓
   WizardShell wraps everything (name, submit, error, edit mode)
 ```
