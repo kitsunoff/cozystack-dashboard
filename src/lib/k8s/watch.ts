@@ -1,20 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { AppInstance } from "./types";
 import type { KubeList } from "./client";
 
-interface WatchEvent {
+interface WatchEvent<T> {
   type: "ADDED" | "MODIFIED" | "DELETED" | "BOOKMARK";
-  object: AppInstance;
+  object: T;
+}
+
+interface HasMetadataName {
+  metadata: { name: string };
 }
 
 /**
  * Subscribe to K8s watch events via SSE and update React Query cache.
- * Connects once after initial fetch, does NOT reconnect on every resourceVersion change.
+ * Generic — works with any resource type that has metadata.name.
  */
-export function useK8sWatch(
+export function useK8sWatch<T extends HasMetadataName>(
   apiPath: string,
   queryKey: unknown[],
   resourceVersion: string | undefined,
@@ -23,9 +26,8 @@ export function useK8sWatch(
   const queryClient = useQueryClient();
   const rvRef = useRef<string | undefined>(undefined);
   const connectedRef = useRef(false);
-  const backoffRef = useRef(1000); // Start at 1s, max 30s
+  const backoffRef = useRef(1000);
 
-  // Track latest resourceVersion without triggering reconnects
   useEffect(() => {
     if (resourceVersion) {
       rvRef.current = resourceVersion;
@@ -42,22 +44,21 @@ export function useK8sWatch(
 
     es.onmessage = (event) => {
       try {
-        const watchEvent = JSON.parse(event.data) as WatchEvent;
+        const watchEvent = JSON.parse(event.data) as WatchEvent<T>;
         if (watchEvent.type === "BOOKMARK") return;
-        applyWatchEvent(queryClient, queryKey, watchEvent);
+        applyWatchEvent<T>(queryClient, queryKey, watchEvent);
       } catch {
         // Ignore parse errors
       }
     };
 
     es.onopen = () => {
-      backoffRef.current = 1000; // Reset backoff on successful connection
+      backoffRef.current = 1000;
     };
 
     es.addEventListener("error", () => {
       es.close();
       connectedRef.current = false;
-      // Exponential backoff before reconnect
       const delay = backoffRef.current;
       backoffRef.current = Math.min(delay * 2, 30_000);
       setTimeout(() => {
@@ -78,12 +79,12 @@ export function useK8sWatch(
   }, [apiPath, enabled, !!resourceVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
-function applyWatchEvent(
+function applyWatchEvent<T extends HasMetadataName>(
   queryClient: ReturnType<typeof useQueryClient>,
   queryKey: unknown[],
-  event: WatchEvent
+  event: WatchEvent<T>
 ) {
-  queryClient.setQueryData<KubeList<AppInstance>>(queryKey, (old) => {
+  queryClient.setQueryData<KubeList<T>>(queryKey, (old) => {
     if (!old) return old;
 
     const items = [...old.items];

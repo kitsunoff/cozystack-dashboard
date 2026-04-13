@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { k8sList, k8sGet, k8sCreate, k8sBatch } from "./client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { k8sList, k8sGet, k8sCreate, k8sBatch, type KubeList } from "./client";
 import { useK8sWatch } from "./watch";
 import { endpoints } from "./endpoints";
 import type {
@@ -350,7 +350,7 @@ export function useEvents(
   instanceNames?: string[],
   releasePrefix?: string
 ) {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["events", namespace],
     queryFn: () => k8sList<K8sEvent>(endpoints.events(namespace)),
     enabled: !!namespace,
@@ -404,6 +404,20 @@ export function useEvents(
         .slice(0, 30);
     },
   });
+
+  // Watch for new events in real-time
+  // query.data is transformed by select, so get raw resourceVersion from cache
+  const queryClient = useQueryClient();
+  const rawData = queryClient.getQueryData<KubeList<K8sEvent>>(["events", namespace]);
+
+  useK8sWatch<K8sEvent>(
+    endpoints.events(namespace),
+    ["events", namespace],
+    rawData?.metadata.resourceVersion,
+    !!namespace && !!rawData
+  );
+
+  return query;
 }
 
 export function useK8sListForDropdown(
