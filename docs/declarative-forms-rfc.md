@@ -59,7 +59,6 @@ spec:
           block: resources-picker
         - key: size
           block: storage-picker
-          with: [storageClass]
 
     - id: scaling
       title: Scaling
@@ -114,7 +113,6 @@ spec:
         - key: size
           block: storage-picker
           basePath: [kafka]
-          with: [storageClass]
 
     - id: zookeeper
       title: ZooKeeper
@@ -128,7 +126,6 @@ spec:
         - key: size
           block: storage-picker
           basePath: [zookeeper]
-          with: [storageClass]
 
     - id: access
       title: Access
@@ -163,7 +160,6 @@ spec:
           block: resources-picker
         - key: size
           block: storage-picker
-          with: [storageClass]
         - key: replicas
           block: replicas-picker
         - key: external
@@ -174,17 +170,35 @@ spec:
 
 ```yaml
 fields:
-  - key: string              # field key in spec (e.g. "replicas", "backup.enabled")
+  - key: string              # primary field key in spec (e.g. "replicas", "backup.enabled")
     block: string             # block type to render (see built-in blocks)
     title: string             # optional title override (default: from schema description)
-    with: [string]            # include related fields in same block
     basePath: [string]        # for nested config (e.g. ["kafka"] → spec.kafka.*)
+    fieldMap:                  # remap schema field names to block slots
+      slotName: schemaField   # e.g. { size: diskSize, storageClass: sc }
     showFields:               # conditional visibility
       when: any               # value that triggers showing
       fields: [string]        # field keys to show/hide
     hidden: boolean           # hide this field entirely
     readOnly: boolean         # show but don't allow editing
 ```
+
+### fieldMap: remapping field names
+
+Blocks expect standard field names (`size`, `storageClass`, `replicas`, etc.). When a chart uses non-standard names, `fieldMap` remaps them:
+
+```yaml
+# Chart uses "diskSize" instead of "size", "sc" instead of "storageClass"
+- key: diskSize
+  block: storage-picker
+  fieldMap:
+    size: diskSize
+    storageClass: sc
+```
+
+The block reads `schemaHas(schema, "diskSize")` instead of `schemaHas(schema, "size")`, and writes to `spec.diskSize` instead of `spec.size`.
+
+Without `fieldMap`, blocks use their default field names — works for all standard Cozystack charts.
 
 ## Section definition
 
