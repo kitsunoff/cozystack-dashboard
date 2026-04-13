@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { cn } from "@/lib/utils";
-import type { FormBlockProps } from "./types";
-import { schemaEnum, schemaDefault, initFormValue } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaEnum, schemaDefault, initFormValue } from "@/components/form/blocks/types";
 
 export function VersionPicker({ schema, basePath = [], title = "Version" }: FormBlockProps) {
   const versions = schemaEnum(schema, "version");

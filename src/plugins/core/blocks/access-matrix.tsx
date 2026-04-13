@@ -13,8 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Trash2, Plus } from "lucide-react";
-import type { FormBlockProps } from "./types";
-import { schemaHas, schemaProp, schemaProps } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaHas, schemaProp, schemaProps } from "@/components/form/blocks/types";
 
 /**
  * Access Matrix — manages users + databases with role assignments.

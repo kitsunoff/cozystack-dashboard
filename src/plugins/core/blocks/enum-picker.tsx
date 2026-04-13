@@ -12,8 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import type { FormBlockProps } from "./types";
-import { schemaEnum, schemaDefault, schemaHas, initFormValue } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaEnum, schemaDefault, schemaHas, initFormValue } from "@/components/form/blocks/types";
 
 type Display = "buttons" | "cards" | "dropdown" | "cards+dropdown";
 

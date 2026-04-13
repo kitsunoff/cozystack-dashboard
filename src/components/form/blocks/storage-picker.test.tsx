@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FormProvider } from "@/components/form/form-context";
-import { StoragePicker } from "./storage-picker";
+import { StoragePicker } from "@/plugins/core/blocks/storage-picker";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),

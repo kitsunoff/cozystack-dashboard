@@ -24,5 +24,5 @@ registerColumns("vmdisks", [
 ]);
 
 // Custom form
-import { VMDiskForm } from "@/components/form/custom/vm-disk-form";
+import { VMDiskForm } from "./form";
 registerCustomForm("vmdisks", VMDiskForm);

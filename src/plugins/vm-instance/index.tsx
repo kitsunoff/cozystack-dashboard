@@ -71,5 +71,5 @@ registerDetailActions("vminstances", [
 ]);
 
 // Custom form
-import { VMInstanceForm } from "@/components/form/custom/vm-instance-form";
+import { VMInstanceForm } from "./form";
 registerCustomForm("vminstances", VMInstanceForm);

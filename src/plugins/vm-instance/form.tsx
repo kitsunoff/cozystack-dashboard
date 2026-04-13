@@ -17,12 +17,12 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { WizardShell } from "@/components/form/blocks/wizard-shell";
-import { ExternalToggle } from "@/components/form/blocks";
+import { ExternalToggle } from "@/plugins/core/blocks/index";
 import { useFormContext } from "@/components/form/form-context";
 import { k8sCreate, k8sPatch } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 import { cn } from "@/lib/utils";
-import type { CustomFormProps } from "../registry";
+import type { CustomFormProps } from "@/components/form/registry";
 
 // --- Schema helpers ---
 

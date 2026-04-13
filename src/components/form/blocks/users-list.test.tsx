@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider } from "@/components/form/form-context";
-import { UsersList } from "./users-list";
+import { UsersList } from "@/plugins/core/blocks/users-list";
 
 function renderWithForm(schema: Record<string, unknown>, initial = {}) {
   return render(

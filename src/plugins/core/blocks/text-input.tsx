@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { FormBlockProps } from "./types";
-import { schemaHas, schemaDefault, schemaDescription, initFormValue } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaHas, schemaDefault, schemaDescription, initFormValue } from "@/components/form/blocks/types";
 
 /**
  * Single-line text input with label and description from schema.

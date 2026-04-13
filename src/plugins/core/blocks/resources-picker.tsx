@@ -5,8 +5,8 @@ import { useFormContext } from "@/components/form/form-context";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import type { FormBlockProps } from "./types";
-import { schemaEnum, schemaDefault, schemaHas, initFormValue } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaEnum, schemaDefault, schemaHas, initFormValue } from "@/components/form/blocks/types";
 
 const PRESET_SPECS: Record<string, { cpu: string; memory: string }> = {
   nano: { cpu: "0.1", memory: "128Mi" },

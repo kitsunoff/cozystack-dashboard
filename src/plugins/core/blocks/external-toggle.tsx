@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import type { FormBlockProps } from "./types";
-import { schemaHas, schemaDefault, initFormValue } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaHas, schemaDefault, initFormValue } from "@/components/form/blocks/types";
 
 export function ExternalToggle({ schema, basePath = [] }: FormBlockProps) {
   const defaultVal = schemaDefault<boolean>(schema, "external") ?? false;

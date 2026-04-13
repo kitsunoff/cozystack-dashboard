@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider } from "@/components/form/form-context";
-import { ResourcesPicker } from "./resources-picker";
+import { ResourcesPicker } from "@/plugins/core/blocks/resources-picker";
 
 function renderWithForm(schema: Record<string, unknown>, initial = {}) {
   return render(

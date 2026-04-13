@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { FormProvider } from "@/components/form/form-context";
-import { ExternalToggle } from "./external-toggle";
+import { ExternalToggle } from "@/plugins/core/blocks/external-toggle";
 
 function renderWithForm(schema: Record<string, unknown>, initial = {}) {
   return render(

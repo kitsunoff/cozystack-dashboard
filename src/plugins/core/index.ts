@@ -5,19 +5,19 @@
 import type { BlockComponent } from "@/components/form/declarative/types";
 import { registerFormBlock } from "@/components/form/declarative/block-registry";
 
-import { VersionPicker } from "@/components/form/blocks/version-picker";
-import { ResourcesPicker } from "@/components/form/blocks/resources-picker";
-import { StoragePicker } from "@/components/form/blocks/storage-picker";
-import { ReplicasPicker } from "@/components/form/blocks/replicas-picker";
-import { ExternalToggle } from "@/components/form/blocks/external-toggle";
-import { UsersList } from "@/components/form/blocks/users-list";
-import { BackupConfig } from "@/components/form/blocks/backup-config";
-import { EnumPicker } from "@/components/form/blocks/enum-picker";
-import { MultilineInput } from "@/components/form/blocks/multiline-input";
-import { BooleanToggle } from "@/components/form/blocks/boolean-toggle";
-import { StringListInput } from "@/components/form/blocks/string-list-input";
-import { TextInput } from "@/components/form/blocks/text-input";
-import { AccessMatrix } from "@/components/form/blocks/access-matrix";
+import { VersionPicker } from "./blocks/version-picker";
+import { ResourcesPicker } from "./blocks/resources-picker";
+import { StoragePicker } from "./blocks/storage-picker";
+import { ReplicasPicker } from "./blocks/replicas-picker";
+import { ExternalToggle } from "./blocks/external-toggle";
+import { UsersList } from "./blocks/users-list";
+import { BackupConfig } from "./blocks/backup-config";
+import { EnumPicker } from "./blocks/enum-picker";
+import { MultilineInput } from "./blocks/multiline-input";
+import { BooleanToggle } from "./blocks/boolean-toggle";
+import { StringListInput } from "./blocks/string-list-input";
+import { TextInput } from "./blocks/text-input";
+import { AccessMatrix } from "./blocks/access-matrix";
 
 registerFormBlock("version-picker", VersionPicker as BlockComponent);
 registerFormBlock("resources-picker", ResourcesPicker as BlockComponent);

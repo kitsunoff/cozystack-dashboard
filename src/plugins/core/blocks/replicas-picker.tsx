@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { cn } from "@/lib/utils";
-import type { FormBlockProps } from "./types";
-import { schemaHas, schemaDefault, initFormValue } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaHas, schemaDefault, initFormValue } from "@/components/form/blocks/types";
 
 const COMMON_REPLICAS = [1, 2, 3, 5];
 

@@ -9,10 +9,10 @@ import { asTab, defaultStatus, ageColumn } from "../helpers";
 import { registerCustomForm } from "@/components/form/registry";
 
 // Tabs
-import { K8sOverviewTab } from "@/components/detail/tabs/k8s-overview-tab";
-import { K8sControlPlaneTab } from "@/components/detail/tabs/k8s-control-plane-tab";
-import { K8sNodeGroupsTab } from "@/components/detail/tabs/k8s-node-groups-tab";
-import { K8sAddonsTab } from "@/components/detail/tabs/k8s-addons-tab";
+import { K8sOverviewTab } from "./tabs/overview";
+import { K8sControlPlaneTab } from "./tabs/control-plane";
+import { K8sNodeGroupsTab } from "./tabs/node-groups";
+import { K8sAddonsTab } from "./tabs/addons";
 import { YamlTab } from "@/components/detail/tabs/yaml-tab";
 
 registerDetailTabs("kuberneteses", [
@@ -69,5 +69,5 @@ registerDetailActions("kuberneteses", [
 ]);
 
 // Custom form
-import { KubernetesForm } from "@/components/form/custom/kubernetes-form";
+import { KubernetesForm } from "./form";
 registerCustomForm("kuberneteses", KubernetesForm);

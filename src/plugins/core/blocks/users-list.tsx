@@ -5,8 +5,8 @@ import { useFormContext } from "@/components/form/form-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { FormBlockProps } from "./types";
-import { schemaHas } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaHas } from "@/components/form/blocks/types";
 
 /**
  * Users list — dynamic key-value map of users with passwords.

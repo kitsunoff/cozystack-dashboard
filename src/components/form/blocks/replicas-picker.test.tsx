@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FormProvider } from "@/components/form/form-context";
-import { ReplicasPicker } from "./replicas-picker";
+import { ReplicasPicker } from "@/plugins/core/blocks/replicas-picker";
 
 function renderWithForm(schema: Record<string, unknown>, initial = {}) {
   return render(

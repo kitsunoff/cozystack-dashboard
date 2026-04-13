@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { useFormContext } from "@/components/form/form-context";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { FormBlockProps } from "./types";
-import { schemaHas, schemaDefault, initFormValue } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaHas, schemaDefault, initFormValue } from "@/components/form/blocks/types";
 
 /**
  * String list input — textarea where each line is an array item.

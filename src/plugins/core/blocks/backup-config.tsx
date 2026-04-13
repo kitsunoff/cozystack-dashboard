@@ -4,8 +4,8 @@ import { useFormContext } from "@/components/form/form-context";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import type { FormBlockProps } from "./types";
-import { schemaHas, schemaDefault, schemaProp, schemaProps } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaHas, schemaDefault, schemaProp, schemaProps } from "@/components/form/blocks/types";
 
 /**
  * Backup configuration — toggle + S3 settings.

@@ -5,10 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { WizardShell } from "@/components/form/blocks/wizard-shell";
-import { StoragePicker } from "@/components/form/blocks";
+import { StoragePicker } from "@/plugins/core/blocks/index";
 import { useFormContext } from "@/components/form/form-context";
 import { cn } from "@/lib/utils";
-import type { CustomFormProps } from "../registry";
+import type { CustomFormProps } from "@/components/form/registry";
 
 const PRESET_IMAGES = [
   { value: "ubuntu", label: "Ubuntu", icon: "🟠" },

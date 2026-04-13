@@ -12,8 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useStorageClasses } from "@/lib/k8s/hooks";
-import type { FormBlockProps } from "./types";
-import { schemaHas, schemaDefault, initFormValue } from "./types";
+import type { FormBlockProps } from "@/components/form/blocks/types";
+import { schemaHas, schemaDefault, initFormValue } from "@/components/form/blocks/types";
 
 export function StoragePicker({ schema, basePath = [], title = "Storage" }: FormBlockProps) {
   const hasSize = schemaHas(schema, "size");
