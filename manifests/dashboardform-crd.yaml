@@ -1,0 +1,61 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dashboardforms.dashboard.cozystack.io
+spec:
+  group: dashboard.cozystack.io
+  names:
+    kind: DashboardForm
+    listKind: DashboardFormList
+    plural: dashboardforms
+    singular: dashboardform
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [target, sections]
+              properties:
+                target:
+                  type: object
+                  required: [plural]
+                  properties:
+                    plural:
+                      type: string
+                    apiGroup:
+                      type: string
+                      default: apps.cozystack.io
+                hideAdvanced:
+                  type: boolean
+                  default: false
+                sections:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, title, blocks]
+                    properties:
+                      id:
+                        type: string
+                      title:
+                        type: string
+                      collapsible:
+                        type: boolean
+                      defaultOpen:
+                        type: boolean
+                      showIf:
+                        type: object
+                        properties:
+                          path:
+                            type: string
+                          value:
+                            x-kubernetes-preserve-unknown-fields: true
+                      blocks:
+                        type: array
+                        items:
+                          x-kubernetes-preserve-unknown-fields: true

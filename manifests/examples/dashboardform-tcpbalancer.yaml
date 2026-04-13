@@ -1,0 +1,23 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: tcpbalancer-form
+spec:
+  target:
+    plural: tcpbalancers
+  sections:
+    - id: resources
+      title: Resources
+      blocks:
+        - resources-picker
+    - id: scaling
+      title: Scaling
+      blocks:
+        - replicas-picker
+    - id: access
+      title: Access
+      blocks:
+        - block: boolean-toggle
+          props:
+            field: external
+            description: "Enable external access from outside the cluster"

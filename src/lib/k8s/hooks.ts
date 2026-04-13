@@ -15,6 +15,7 @@ import type {
   AppInstance,
   K8sEvent,
   MachineDeployment,
+  DashboardForm,
 } from "./types";
 
 export function useMarketplacePanels() {
@@ -106,6 +107,18 @@ export function useApplicationDefinition(name: string) {
   });
 }
 
+export function useDashboardForms() {
+  return useQuery({
+    queryKey: ["dashboardForms"],
+    queryFn: () => k8sList<DashboardForm>(endpoints.dashboardForms()),
+  });
+}
+
+export function useDashboardForm(plural: string) {
+  const { data: forms } = useDashboardForms();
+  return forms?.items.find((f) => f.spec.target.plural === plural) ?? null;
+}
+
 export function useCustomFormsOverrides() {
   return useQuery({
     queryKey: ["customFormsOverrides"],
@@ -133,6 +146,30 @@ export function useFactories() {
   return useQuery({
     queryKey: ["factories"],
     queryFn: () => k8sList<Factory>(endpoints.factories()),
+  });
+}
+
+export interface StorageClassInfo {
+  name: string;
+  provisioner: string;
+  isDefault: boolean;
+}
+
+export function useStorageClasses() {
+  return useQuery({
+    queryKey: ["storageClasses"],
+    queryFn: async () => {
+      const data = await k8sList<{
+        metadata: { name: string; annotations?: Record<string, string> };
+        provisioner: string;
+      }>(endpoints.storageClasses());
+      return data.items.map((sc): StorageClassInfo => ({
+        name: sc.metadata.name,
+        provisioner: sc.provisioner,
+        isDefault: sc.metadata.annotations?.["storageclass.kubernetes.io/is-default-class"] === "true",
+      }));
+    },
+    staleTime: 5 * 60_000,
   });
 }
 

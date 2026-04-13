@@ -6,6 +6,8 @@ export interface FormBlockProps {
   basePath?: string[];
   /** Optional title override */
   title?: string;
+  /** Arbitrary block-specific configuration from DashboardForm CRD */
+  props?: Record<string, unknown>;
 }
 
 /** Get properties object from schema */
@@ -38,6 +40,11 @@ export function schemaEnum(schema: Record<string, unknown>, key: string): string
 /** Extract default value */
 export function schemaDefault<T>(schema: Record<string, unknown>, key: string): T | undefined {
   return schemaProp(schema, key)?.default as T | undefined;
+}
+
+/** Extract description from a property */
+export function schemaDescription(schema: Record<string, unknown>, key: string): string | undefined {
+  return schemaProp(schema, key)?.description as string | undefined;
 }
 
 /** Initialize a form value if it's undefined. Call in useEffect on mount. */

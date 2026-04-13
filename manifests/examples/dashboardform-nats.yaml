@@ -1,0 +1,28 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: nats-form
+spec:
+  target:
+    plural: natses
+  sections:
+    - id: resources
+      title: Resources
+      blocks:
+        - resources-picker
+        - storage-picker
+    - id: scaling
+      title: Scaling
+      blocks:
+        - replicas-picker
+    - id: users
+      title: Users
+      blocks:
+        - users-list
+    - id: access
+      title: Access
+      blocks:
+        - block: boolean-toggle
+          props:
+            field: external
+            description: "Enable external access from outside the cluster"

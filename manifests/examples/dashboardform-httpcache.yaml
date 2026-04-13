@@ -1,0 +1,19 @@
+apiVersion: dashboard.cozystack.io/v1alpha1
+kind: DashboardForm
+metadata:
+  name: httpcache-form
+spec:
+  target:
+    plural: httpcaches
+  sections:
+    - id: storage
+      title: Storage
+      blocks:
+        - storage-picker
+    - id: access
+      title: Access
+      blocks:
+        - block: boolean-toggle
+          props:
+            field: external
+            description: "Enable external access from outside the cluster"

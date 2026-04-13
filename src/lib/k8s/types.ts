@@ -162,6 +162,46 @@ export interface CustomColumnsOverride {
   status?: CommonStatus;
 }
 
+// dashboard.cozystack.io/v1alpha1 DashboardForm
+export interface DashboardForm {
+  apiVersion: string;
+  kind: "DashboardForm";
+  metadata: ObjectMeta;
+  spec: DashboardFormSpec;
+}
+
+export interface DashboardFormSpec {
+  target: {
+    plural: string;
+    apiGroup?: string;
+  };
+  sections: DashboardFormSection[];
+  hideAdvanced?: boolean;
+}
+
+export interface DashboardFormSection {
+  id: string;
+  title: string;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+  showIf?: { path: string; value: unknown };
+  blocks: DashboardFormBlock[];
+}
+
+export type DashboardFormBlock = string | DashboardFormBlockFull;
+
+export interface DashboardFormBlockFull {
+  block: string;
+  path?: string;
+  title?: string;
+  fieldMap?: Record<string, string>;
+  showIf?: { path: string; value: unknown };
+  hidden?: boolean;
+  readOnly?: boolean;
+  /** Arbitrary block-specific configuration */
+  props?: Record<string, unknown>;
+}
+
 export interface CustomColumnsOverrideSpec {
   customizationId: string;
   columns?: ColumnDefinition[];
