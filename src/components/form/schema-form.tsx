@@ -11,7 +11,7 @@ import { FieldRenderer } from "./field-renderer";
 import { walkSchema, collectVisibleFields } from "@/lib/schema/walker";
 import { applyOverrides } from "@/lib/schema/cfo-merger";
 import { buildPrefillValues } from "@/lib/schema/cfp-prefill";
-import { k8sCreate } from "@/lib/k8s/client";
+import { k8sCreate, k8sPatch } from "@/lib/k8s/client";
 import { deepMerge } from "@/lib/utils";
 import { endpoints } from "@/lib/k8s/endpoints";
 import type { SchemaNode, CFOSpec, CFPSpec } from "@/lib/schema/types";
@@ -26,6 +26,8 @@ interface SchemaFormProps {
   apiVersion?: string;
   kind: string;
   backHref: string;
+  editName?: string;
+  editValues?: Record<string, unknown>;
 }
 
 export function SchemaForm({
@@ -38,7 +40,11 @@ export function SchemaForm({
   apiVersion = "v1alpha1",
   kind,
   backHref,
+  editName,
+  editValues,
 }: SchemaFormProps) {
+  const isEdit = !!editName;
+
   const rootNode = useMemo(() => {
     let schema = walkSchema(openAPISchema);
     if (cfo) {
@@ -48,13 +54,16 @@ export function SchemaForm({
   }, [openAPISchema, cfo]);
 
   const initialValues = useMemo(() => {
+    if (isEdit && editValues) {
+      return editValues;
+    }
     const defaults = buildDefaultsFromSchema(rootNode);
     if (cfp) {
       const prefill = buildPrefillValues(cfp);
       return deepMerge(defaults, prefill);
     }
     return defaults;
-  }, [rootNode, cfp]);
+  }, [rootNode, cfp, isEdit, editValues]);
 
   return (
     <FormProvider initialValues={initialValues} namespace={namespace}>
@@ -66,6 +75,7 @@ export function SchemaForm({
         apiVersion={apiVersion}
         kind={kind}
         backHref={backHref}
+        editName={editName}
       />
     </FormProvider>
   );
@@ -79,6 +89,7 @@ function FormContent({
   apiVersion,
   kind,
   backHref,
+  editName,
 }: {
   rootNode: SchemaNode;
   plural: string;
@@ -87,12 +98,14 @@ function FormContent({
   apiVersion: string;
   kind: string;
   backHref: string;
+  editName?: string;
 }) {
-  const { values, setValue } = useFormContext();
+  const isEdit = !!editName;
+  const { values } = useFormContext();
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resourceName, setResourceName] = useState("");
+  const [resourceName, setResourceName] = useState(editName ?? "");
 
   // OpenAPI schema may be the spec contents directly (no wrapping {spec: ...})
   // or wrapped in {properties: {metadata, spec}}. Handle both.
@@ -106,27 +119,33 @@ function FormContent({
     setError(null);
 
     try {
-      // If schema had a spec wrapper, values has {spec: ...}; otherwise values IS the spec
       const hasSpecWrapper = rootNode.properties?.["spec"] != null;
       const specValues = hasSpecWrapper
         ? (values as Record<string, unknown>).spec
         : values;
 
-      const resource = {
-        apiVersion: `${apiGroup}/${apiVersion}`,
-        kind,
-        metadata: {
-          name: resourceName.trim(),
-          namespace,
-        },
-        spec: specValues,
-      };
+      if (isEdit) {
+        await k8sPatch(
+          endpoints.instance(plural, namespace, editName),
+          { spec: specValues }
+        );
+      } else {
+        const resource = {
+          apiVersion: `${apiGroup}/${apiVersion}`,
+          kind,
+          metadata: {
+            name: resourceName.trim(),
+            namespace,
+          },
+          spec: specValues,
+        };
+        await k8sCreate(endpoints.instances(plural, namespace), resource);
+      }
 
-      await k8sCreate(endpoints.instances(plural, namespace), resource);
       router.push(backHref);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to create resource"
+        err instanceof Error ? err.message : "Failed to save resource"
       );
     } finally {
       setSubmitting(false);
@@ -142,7 +161,8 @@ function FormContent({
           onChange={(e) => setResourceName(e.target.value)}
           placeholder="my-instance"
           required
-          autoFocus
+          autoFocus={!isEdit}
+          disabled={isEdit}
         />
       </div>
 
@@ -163,7 +183,7 @@ function FormContent({
 
       <div className="flex gap-3 pt-3">
         <Button type="submit" disabled={submitting}>
-          {submitting ? "Creating..." : "Create"}
+          {submitting ? (isEdit ? "Saving..." : "Creating...") : (isEdit ? "Save" : "Create")}
         </Button>
         <Button
           type="button"

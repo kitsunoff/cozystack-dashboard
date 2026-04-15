@@ -6,13 +6,17 @@ import {
   useMarketplacePanels,
   useApplicationDefinition,
   useInstance,
+  useCustomFormsOverrides,
+  useCustomFormsPrefills,
 } from "@/lib/k8s/hooks";
 import { useNamespace } from "@/hooks/use-namespace";
 import { Header } from "@/components/layout/header";
 import { getCustomForm } from "@/components/form/registry";
 import { DeclarativeForm } from "@/components/form/declarative";
+import { SchemaForm } from "@/components/form/schema-form";
 import { useDashboardForm } from "@/lib/k8s/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { CFOSpec, CFPSpec } from "@/lib/schema/types";
 
 import "@/plugins";
 
@@ -35,10 +39,12 @@ function EditInstanceContent({
   const appDefName = panel?.metadata.name ?? "";
   const { data: appDef, isLoading: appDefLoading } =
     useApplicationDefinition(appDefName);
+  const { data: cfoList, isLoading: cfoLoading } = useCustomFormsOverrides();
+  const { data: cfpList, isLoading: cfpLoading } = useCustomFormsPrefills();
   const dashboardForm = useDashboardForm(plural);
 
   const backHref = `/${namespace}/${plural}/${instanceName}`;
-  const isLoading = panelsLoading || instanceLoading || appDefLoading;
+  const isLoading = panelsLoading || instanceLoading || appDefLoading || cfoLoading || cfpLoading;
 
   if (isLoading) {
     return (
@@ -120,9 +126,23 @@ function EditInstanceContent({
               editName={instanceName}
               editValues={spec}
             />
+          ) : schema ? (
+            <SchemaForm
+              openAPISchema={schema}
+              cfo={cfoList?.items.find((c) => c.spec.customizationId === `default-/${panel.spec.apiGroup}/${panel.spec.apiVersion}/${plural}`)?.spec as CFOSpec | undefined}
+              cfp={cfpList?.items.find((c) => c.spec.customizationId === `default-/${panel.spec.apiGroup}/${panel.spec.apiVersion}/${plural}`)?.spec as CFPSpec | undefined}
+              plural={plural}
+              namespace={namespace}
+              apiGroup={panel.spec.apiGroup}
+              apiVersion={panel.spec.apiVersion}
+              kind={appDef?.spec.application.kind ?? panel.spec.name}
+              backHref={backHref}
+              editName={instanceName}
+              editValues={spec}
+            />
           ) : (
             <p className="text-sm text-muted-foreground">
-              No form available for editing this resource.
+              No schema available for editing this resource.
             </p>
           )}
         </div>
