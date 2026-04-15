@@ -6,7 +6,9 @@ import {
   useInstances,
   useApplicationDefinition,
   useEvents,
+  useWorkloadMonitors,
 } from "@/lib/k8s/hooks";
+import { groupMonitorsByInstance, summarizeMonitors } from "@/lib/k8s/workload-utils";
 import { useNamespace } from "@/hooks/use-namespace";
 import { Header } from "@/components/layout/header";
 import { InstanceTable } from "@/components/instances/instance-table";
@@ -43,6 +45,16 @@ function InstancesContent({ plural }: { plural: string }) {
   const releasePrefix = appDef?.spec.release?.prefix ?? "";
   const { data: events } = useEvents(namespace, instanceNames, releasePrefix);
 
+  const { data: monitorList } = useWorkloadMonitors(namespace);
+  const monitorsByInstance = useMemo(
+    () => groupMonitorsByInstance(monitorList?.items ?? []),
+    [monitorList]
+  );
+  const allMonitors = monitorList?.items ?? [];
+  const workloadSummary = allMonitors.length > 0
+    ? summarizeMonitors(allMonitors)
+    : null;
+
   const listSections = getListSections(plural);
 
   return (
@@ -63,7 +75,12 @@ function InstancesContent({ plural }: { plural: string }) {
                 ))}
               </div>
             ) : (
-              <InstanceMetrics instances={instances} />
+              <InstanceMetrics
+                instances={instances}
+                workloadSummary={workloadSummary
+                  ? { operational: workloadSummary.operational, total: workloadSummary.total }
+                  : null}
+              />
             )}
 
             {/* Table */}
@@ -77,6 +94,7 @@ function InstancesContent({ plural }: { plural: string }) {
                 namespace={namespace}
                 isLoading={isLoading}
                 appName={appName}
+                monitorsByInstance={monitorsByInstance}
               />
             </div>
 
