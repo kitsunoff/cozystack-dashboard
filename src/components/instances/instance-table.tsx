@@ -15,12 +15,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AppInstance } from "@/lib/k8s/types";
+import type { AppInstance, WorkloadMonitor } from "@/lib/k8s/types";
 import { k8sDelete } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 import { LiveAge } from "@/components/ui/live-age";
 import { getColumns } from "@/components/registry";
 import type { ColumnDef } from "@/components/registry";
+import { summarizeMonitors } from "@/lib/k8s/workload-utils";
+import { StatusDot } from "@/plugins/helpers";
 
 // Activate registrations
 import "@/plugins";
@@ -65,6 +67,7 @@ interface InstanceTableProps {
   namespace: string;
   isLoading: boolean;
   appName?: string;
+  monitorsByInstance?: Map<string, WorkloadMonitor[]>;
 }
 
 export function InstanceTable({
@@ -73,9 +76,37 @@ export function InstanceTable({
   namespace,
   isLoading,
   appName,
+  monitorsByInstance,
 }: InstanceTableProps) {
   const [search, setSearch] = useState("");
-  const columns = resolveColumns(plural);
+  const baseColumns = resolveColumns(plural);
+
+  const hasMonitors = monitorsByInstance && monitorsByInstance.size > 0;
+  const workloadsColumn: ColumnDef = {
+    key: "workloads",
+    label: "Workloads",
+    render: (instance) => {
+      const monitors = monitorsByInstance?.get(instance.metadata.name);
+      if (!monitors || monitors.length === 0) {
+        return <span className="text-sm text-muted-foreground">--</span>;
+      }
+      const summary = summarizeMonitors(monitors);
+      const allOp = summary.operational === summary.total;
+      const healthy = summary.availableReplicas === summary.totalReplicas;
+      return (
+        <div className="flex items-center gap-1.5">
+          <StatusDot color={allOp && healthy ? "bg-emerald-500" : "bg-amber-500"} />
+          <span className="text-sm tabular-nums">
+            {summary.availableReplicas}/{summary.totalReplicas}
+          </span>
+        </div>
+      );
+    },
+  };
+
+  const columns = hasMonitors
+    ? [baseColumns[0], workloadsColumn, ...baseColumns.slice(1)]
+    : baseColumns;
 
   if (isLoading) {
     return (

@@ -17,6 +17,8 @@ import type {
   MachineDeployment,
   DashboardForm,
   K8sSecret,
+  WorkloadMonitor,
+  Workload,
 } from "./types";
 
 export function useMarketplacePanels() {
@@ -526,4 +528,42 @@ export function useInstanceSecrets(
         return name.startsWith(releaseName) || name.startsWith(instanceName);
       }),
   });
+}
+
+// --- Workload Monitoring ---
+
+export function useWorkloadMonitors(namespace: string) {
+  const query = useQuery({
+    queryKey: ["workloadMonitors", namespace],
+    queryFn: () =>
+      k8sList<WorkloadMonitor>(endpoints.workloadMonitors(namespace)),
+    enabled: !!namespace,
+  });
+
+  useK8sWatch(
+    endpoints.workloadMonitors(namespace),
+    ["workloadMonitors", namespace],
+    query.data?.metadata.resourceVersion,
+    !!namespace && !!query.data
+  );
+
+  return query;
+}
+
+export function useWorkloads(namespace: string) {
+  const query = useQuery({
+    queryKey: ["workloads", namespace],
+    queryFn: () =>
+      k8sList<Workload>(endpoints.workloads(namespace)),
+    enabled: !!namespace,
+  });
+
+  useK8sWatch(
+    endpoints.workloads(namespace),
+    ["workloads", namespace],
+    query.data?.metadata.resourceVersion,
+    !!namespace && !!query.data
+  );
+
+  return query;
 }

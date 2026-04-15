@@ -64,4 +64,10 @@ export const endpoints = {
   // Cluster API resources
   machineDeployments: (namespace: string) =>
     `/apis/cluster.x-k8s.io/v1beta1/namespaces/${namespace}/machinedeployments`,
+
+  // Workload monitoring (cozystack.io/v1alpha1)
+  workloadMonitors: (namespace: string) =>
+    `${COZYSTACK_BASE}/namespaces/${namespace}/workloadmonitors`,
+  workloads: (namespace: string) =>
+    `${COZYSTACK_BASE}/namespaces/${namespace}/workloads`,
 } as const;

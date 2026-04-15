@@ -275,3 +275,47 @@ export interface AppInstance {
   spec: Record<string, unknown>;
   status?: CommonStatus;
 }
+
+// WorkloadMonitor (cozystack.io/v1alpha1)
+
+export interface WorkloadMonitorSpec {
+  kind: string;
+  type: string;
+  version: string;
+  replicas: number;
+  minReplicas: number;
+  selector: Record<string, string>;
+}
+
+export interface WorkloadMonitorStatus {
+  availableReplicas: number;
+  observedReplicas: number;
+  operational?: boolean;
+}
+
+export interface WorkloadMonitor {
+  apiVersion: string;
+  kind: "WorkloadMonitor";
+  metadata: ObjectMeta;
+  spec: WorkloadMonitorSpec;
+  status?: WorkloadMonitorStatus;
+}
+
+// Workload (cozystack.io/v1alpha1)
+
+export interface WorkloadStatus {
+  kind: string;
+  type: string;
+  operational: boolean;
+  resources: {
+    cpu: string;
+    memory: string;
+  };
+}
+
+export interface Workload {
+  apiVersion: string;
+  kind: "Workload";
+  metadata: ObjectMeta;
+  status?: WorkloadStatus;
+}
