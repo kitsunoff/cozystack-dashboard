@@ -48,6 +48,33 @@ export function Header({ title, subtitle, search }: HeaderProps) {
             />
           </div>
         )}
+        <button
+          type="button"
+          onClick={() =>
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", metaKey: true })
+            )
+          }
+          className="hidden h-9 items-center gap-2 rounded-md border bg-background px-3 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors sm:flex"
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+            />
+          </svg>
+          <span>Search...</span>
+          <kbd className="pointer-events-none h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium flex">
+            <span className="text-xs">&#8984;</span>K
+          </kbd>
+        </button>
         <Suspense>
           <NamespaceSelector />
         </Suspense>
