@@ -2,13 +2,18 @@
  * VM Instance plugin — columns, status, start/stop/restart actions, custom form.
  */
 
-import { registerDetailActions, registerColumns, registerStatusRenderer } from "@/components/registry";
+import { registerDetailActions, registerDetailTabs, registerColumns, registerStatusRenderer } from "@/components/registry";
 import type { AppInstance } from "@/lib/k8s/types";
 import { k8sPatch } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 import { Power, PowerOff, RotateCw } from "lucide-react";
-import { StatusRow, ageColumn } from "../helpers";
+import { StatusRow, asTab, ageColumn } from "../helpers";
 import { registerCustomForm } from "@/components/form/registry";
+import { OverviewTab } from "@/components/detail/tabs/overview-tab";
+import { SecretsTab } from "@/components/detail/tabs/secrets-tab";
+import { WorkloadsTab } from "@/components/detail/tabs/workloads-tab";
+import { YamlTab } from "@/components/detail/tabs/yaml-tab";
+import { VmConsoleTab } from "./tabs/console-tab";
 
 // Status
 function vmStatus(i: AppInstance) {
@@ -31,6 +36,15 @@ function vmStatus(i: AppInstance) {
 }
 
 registerStatusRenderer("vminstances", vmStatus);
+
+// Tabs
+registerDetailTabs("vminstances", [
+  { key: "overview", label: "Overview", component: asTab(OverviewTab) },
+  { key: "console", label: "Console", component: asTab(VmConsoleTab) },
+  { key: "workloads", label: "Workloads", component: asTab(WorkloadsTab) },
+  { key: "secrets", label: "Secrets", component: SecretsTab },
+  { key: "yaml", label: "YAML", component: asTab(YamlTab) },
+]);
 
 // Columns
 registerColumns("vminstances", [
