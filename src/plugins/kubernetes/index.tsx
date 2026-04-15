@@ -14,6 +14,7 @@ import { K8sControlPlaneTab } from "./tabs/control-plane";
 import { K8sNodeGroupsTab } from "./tabs/node-groups";
 import { K8sAddonsTab } from "./tabs/addons";
 import { SecretsTab } from "@/components/detail/tabs/secrets-tab";
+import { WorkloadsTab } from "@/components/detail/tabs/workloads-tab";
 import { YamlTab } from "@/components/detail/tabs/yaml-tab";
 
 registerDetailTabs("kuberneteses", [
@@ -21,6 +22,7 @@ registerDetailTabs("kuberneteses", [
   { key: "control-plane", label: "Control Plane", component: asTab(K8sControlPlaneTab) },
   { key: "node-groups", label: "Node Groups", component: asTab(K8sNodeGroupsTab) },
   { key: "addons", label: "Addons", component: asTab(K8sAddonsTab) },
+  { key: "workloads", label: "Workloads", component: asTab(WorkloadsTab) },
   { key: "secrets", label: "Secrets", component: SecretsTab },
   { key: "yaml", label: "YAML", component: asTab(YamlTab) },
 ]);
