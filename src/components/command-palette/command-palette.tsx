@@ -10,38 +10,36 @@ import {
   DialogPopup,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { useHotkey } from "./use-hotkey";
+import { useIsMac } from "@/hooks/use-is-mac";
 import { useKeyboardNav } from "./use-keyboard-nav";
 import { useCommandItems } from "./use-command-items";
+import { useCommandPalette } from "./command-palette-provider";
 import type { NavigationLevel } from "./types";
 
 export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen } = useCommandPalette();
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState<NavigationLevel>({ type: "root" });
   const inputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
+  const isMac = useIsMac();
 
-  const reset = useCallback(() => {
-    setOpen(false);
-    setQuery("");
-    setLevel({ type: "root" });
-  }, []);
-
-  const toggle = useCallback(() => {
-    if (open) {
-      reset();
-    } else {
-      setOpen(true);
+  // Reset local state when palette closes
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      setLevel({ type: "root" });
     }
-  }, [open, reset]);
+  }, [open]);
 
-  useHotkey(toggle);
+  const close = useCallback(() => {
+    setOpen(false);
+  }, [setOpen]);
 
   // Close on route change
   useEffect(() => {
-    reset();
-  }, [pathname, reset]);
+    close();
+  }, [pathname, close]);
 
   const navigate = useCallback((next: NavigationLevel) => {
     setLevel(next);
@@ -50,12 +48,11 @@ export function CommandPalette() {
 
   const goBack = useCallback(() => {
     if (level.type === "instance") {
-      const panel = level;
       setLevel({
         type: "resource",
-        plural: panel.plural,
-        label: panel.label,
-        icon: panel.icon,
+        plural: level.plural,
+        label: level.resourceLabel,
+        icon: level.icon,
       });
     } else {
       setLevel({ type: "root" });
@@ -63,19 +60,15 @@ export function CommandPalette() {
     setQuery("");
   }, [level]);
 
-  const { items, isLoading } = useCommandItems(query, level, navigate, reset);
+  const { items, isLoading } = useCommandItems(query, level, navigate, close);
   const { highlightedIndex, onKeyDown: navKeyDown, setItemRef } =
     useKeyboardNav(items);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen) {
-        reset();
-      } else {
-        setOpen(true);
-      }
+      setOpen(nextOpen);
     },
-    [reset]
+    [setOpen]
   );
 
   const handleSelect = useCallback(
@@ -161,7 +154,7 @@ export function CommandPalette() {
             />
             {!breadcrumb && (
               <kbd className="pointer-events-none ml-2 hidden h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
-                <span className="text-xs">&#8984;</span>K
+                {isMac ? <span className="text-xs">&#8984;</span> : <span className="text-xs">Ctrl+</span>}K
               </kbd>
             )}
           </div>

@@ -1,13 +1,15 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import type { CommandItem } from "./types";
 
 export function useKeyboardNav(items: CommandItem[]) {
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const itemRefs = useRef<Map<number, HTMLElement>>(new Map());
 
+  const itemsKey = useMemo(() => items.map((i) => i.id).join(","), [items]);
+
   useEffect(() => {
     setHighlightedIndex(0);
-  }, [items.length]);
+  }, [itemsKey]);
 
   useEffect(() => {
     const el = itemRefs.current.get(highlightedIndex);

@@ -123,6 +123,31 @@ describe("useKeyboardNav", () => {
     rerender({ items: items5 });
     expect(result.current.highlightedIndex).toBe(0);
   });
+
+  it("resets index when items identity changes even with same length", () => {
+    const itemsA: CommandItem[] = [
+      { id: "a", label: "A", onSelect: vi.fn() },
+      { id: "b", label: "B", onSelect: vi.fn() },
+      { id: "c", label: "C", onSelect: vi.fn() },
+    ];
+    const itemsB: CommandItem[] = [
+      { id: "x", label: "X", onSelect: vi.fn() },
+      { id: "y", label: "Y", onSelect: vi.fn() },
+      { id: "z", label: "Z", onSelect: vi.fn() },
+    ];
+    const { result, rerender } = renderHook(
+      ({ items }) => useKeyboardNav(items),
+      { initialProps: { items: itemsA } }
+    );
+    act(() => {
+      const event = { key: "ArrowDown", preventDefault: vi.fn() } as unknown as React.KeyboardEvent;
+      result.current.onKeyDown(event);
+      result.current.onKeyDown(event);
+    });
+    expect(result.current.highlightedIndex).toBe(2);
+    rerender({ items: itemsB });
+    expect(result.current.highlightedIndex).toBe(0);
+  });
 });
 
 // --- useHotkey tests ---

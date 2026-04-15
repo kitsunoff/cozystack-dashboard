@@ -3,6 +3,8 @@
 import { Suspense } from "react";
 import { NamespaceSelector } from "./namespace-selector";
 import { ThemeToggle } from "./theme-toggle";
+import { useCommandPalette } from "@/components/command-palette/command-palette-provider";
+import { useIsMac } from "@/hooks/use-is-mac";
 
 interface HeaderProps {
   title?: string;
@@ -15,6 +17,9 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle, search }: HeaderProps) {
+  const { toggle } = useCommandPalette();
+  const isMac = useIsMac();
+
   return (
     <header className="h-16 border-b bg-card flex items-center justify-between px-8 shrink-0">
       <div>
@@ -50,11 +55,7 @@ export function Header({ title, subtitle, search }: HeaderProps) {
         )}
         <button
           type="button"
-          onClick={() =>
-            document.dispatchEvent(
-              new KeyboardEvent("keydown", { key: "k", metaKey: true })
-            )
-          }
+          onClick={toggle}
           className="hidden h-9 items-center gap-2 rounded-md border bg-background px-3 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors sm:flex"
         >
           <svg
@@ -72,7 +73,7 @@ export function Header({ title, subtitle, search }: HeaderProps) {
           </svg>
           <span>Search...</span>
           <kbd className="pointer-events-none h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium flex">
-            <span className="text-xs">&#8984;</span>K
+            {isMac ? <span className="text-xs">&#8984;</span> : <span className="text-xs">Ctrl+</span>}K
           </kbd>
         </button>
         <Suspense>

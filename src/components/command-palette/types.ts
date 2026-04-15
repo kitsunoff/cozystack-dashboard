@@ -15,4 +15,4 @@ export interface CommandItem {
 export type NavigationLevel =
   | { type: "root" }
   | { type: "resource"; plural: string; label: string; icon?: string }
-  | { type: "instance"; plural: string; instance: AppInstance; label: string; icon?: string };
+  | { type: "instance"; plural: string; instance: AppInstance; label: string; resourceLabel: string; icon?: string };

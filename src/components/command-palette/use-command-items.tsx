@@ -161,6 +161,7 @@ export function useCommandItems(
             plural: level.plural,
             instance: inst,
             label: inst.metadata.name,
+            resourceLabel: level.label,
             icon: level.icon,
           }),
       });
@@ -268,6 +269,7 @@ export function useCommandItems(
                 plural: svc.panel.spec.plural,
                 instance: inst,
                 label: inst.metadata.name,
+                resourceLabel: svc.panel.spec.name,
                 icon: svc.panel.spec.icon,
               }),
           });
