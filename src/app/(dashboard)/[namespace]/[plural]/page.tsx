@@ -50,9 +50,17 @@ function InstancesContent({ plural }: { plural: string }) {
     () => groupMonitorsByInstance(monitorList?.items ?? []),
     [monitorList]
   );
-  const allMonitors = monitorList?.items ?? [];
-  const workloadSummary = allMonitors.length > 0
-    ? summarizeMonitors(allMonitors)
+
+  // Aggregate only monitors belonging to displayed instances
+  const relevantMonitors = useMemo(() => {
+    const names = new Set(instanceNames);
+    return Array.from(monitorsByInstance.entries())
+      .filter(([name]) => names.has(name))
+      .flatMap(([, monitors]) => monitors);
+  }, [monitorsByInstance, instanceNames]);
+
+  const workloadSummary = relevantMonitors.length > 0
+    ? summarizeMonitors(relevantMonitors)
     : null;
 
   const listSections = getListSections(plural);
