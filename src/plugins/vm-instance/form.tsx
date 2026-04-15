@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -19,9 +20,12 @@ import { Separator } from "@/components/ui/separator";
 import { WizardShell } from "@/components/form/blocks/wizard-shell";
 import { ExternalToggle } from "@/plugins/core/blocks/index";
 import { useFormContext } from "@/components/form/form-context";
+import { useInstances } from "@/lib/k8s/hooks";
+import { useNamespace } from "@/hooks/use-namespace";
 import { k8sCreate, k8sPatch } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 import { cn } from "@/lib/utils";
+import { Plus, X } from "lucide-react";
 import type { CustomFormProps } from "@/components/form/registry";
 
 // --- Schema helpers ---
@@ -144,6 +148,8 @@ export function VMInstanceForm({
       <BootImageSection schema={schema} />
       <Separator />
       <InstanceTypePicker />
+      <Separator />
+      <DisksSection namespace={namespace} />
       <Separator />
       <ExternalToggle schema={schema} />
       <Separator />
@@ -360,6 +366,91 @@ function CloudInitSection() {
         placeholder={"#cloud-config\npackages:\n  - nginx"}
       />
       <p className="text-xs text-muted-foreground">Cloud-init configuration in YAML format</p>
+    </div>
+  );
+}
+
+interface DiskEntry {
+  name: string;
+  bus?: string;
+}
+
+function DisksSection({ namespace }: { namespace: string }) {
+  const { getValue, setValue } = useFormContext();
+  const disks = (getValue(["disks"]) as DiskEntry[]) ?? [];
+
+  const { data: diskList } = useInstances("vmdisks", namespace);
+  const availableDisks = diskList?.items ?? [];
+
+  const attachedNames = new Set(disks.map((d) => d.name));
+
+  const addDisk = (name: string) => {
+    setValue(["disks"], [...disks, { name }]);
+  };
+
+  const removeDisk = (index: number) => {
+    setValue(["disks"], disks.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-sm font-medium">Disks</Label>
+
+      {disks.length > 0 && (
+        <div className="space-y-2">
+          {disks.map((disk, i) => (
+            <div
+              key={disk.name}
+              className="flex items-center justify-between rounded-lg border px-3 py-2"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-mono">{disk.name}</span>
+                {disk.bus && (
+                  <Badge variant="secondary" className="text-xs">
+                    {disk.bus}
+                  </Badge>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => removeDisk(i)}
+                className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {availableDisks.length > 0 ? (
+        <Select
+          value=""
+          onValueChange={(v) => { if (v) addDisk(v); }}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Attach a disk..." />
+          </SelectTrigger>
+          <SelectContent>
+            {availableDisks
+              .filter((d) => !attachedNames.has(d.metadata.name))
+              .map((d) => (
+                <SelectItem key={d.metadata.name} value={d.metadata.name}>
+                  {d.metadata.name}
+                </SelectItem>
+              ))}
+            {availableDisks.filter((d) => !attachedNames.has(d.metadata.name)).length === 0 && (
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                All disks attached
+              </div>
+            )}
+          </SelectContent>
+        </Select>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          No VM disks found in this namespace. Create a disk first.
+        </p>
+      )}
     </div>
   );
 }
