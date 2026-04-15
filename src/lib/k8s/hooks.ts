@@ -16,6 +16,7 @@ import type {
   K8sEvent,
   MachineDeployment,
   DashboardForm,
+  K8sSecret,
 } from "./types";
 
 export function useMarketplacePanels() {
@@ -482,4 +483,47 @@ function getNestedValue(obj: unknown, path: string[]): unknown {
     current = (current as Record<string, unknown>)[key];
   }
   return current;
+}
+
+// --- Release prefix ---
+
+/**
+ * Resolve the Helm release prefix for a given resource plural.
+ * Lookup chain: plural → MarketplacePanel.metadata.name → ApplicationDefinition.spec.release.prefix
+ */
+export function useReleasePrefix(plural: string) {
+  const { data: panels } = useMarketplacePanels();
+  const appDefName = panels?.find((p) => p.spec.plural === plural)?.metadata.name ?? "";
+  const { data: appDef } = useApplicationDefinition(appDefName);
+  return appDef?.spec.release?.prefix ?? "";
+}
+
+// --- Secrets ---
+
+const HELM_RELEASE_SECRET_TYPE = "helm.sh/release.v1";
+
+/**
+ * Fetch secrets belonging to an instance.
+ * Matches by two prefixes: `{releasePrefix}{instanceName}` and bare `{instanceName}`.
+ * Helm charts may name secrets either way. Helm-internal release secrets are excluded.
+ */
+export function useInstanceSecrets(
+  namespace: string,
+  plural: string,
+  instanceName: string
+) {
+  const releasePrefix = useReleasePrefix(plural);
+  const releaseName = `${releasePrefix}${instanceName}`;
+
+  return useQuery({
+    queryKey: ["secrets", namespace, releaseName],
+    queryFn: () => k8sList<K8sSecret>(endpoints.secrets(namespace)),
+    enabled: !!namespace && !!instanceName,
+    select: (data) =>
+      data.items.filter((s) => {
+        if (s.type === HELM_RELEASE_SECRET_TYPE) return false;
+        const name = s.metadata.name;
+        return name.startsWith(releaseName) || name.startsWith(instanceName);
+      }),
+  });
 }
