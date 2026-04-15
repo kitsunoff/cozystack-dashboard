@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { AppInstance, WorkloadMonitor, Workload } from "@/lib/k8s/types";
-import { useWorkloadMonitors, useWorkloads } from "@/lib/k8s/hooks";
+import { useWorkloadMonitors, useWorkloads, useReleasePrefix } from "@/lib/k8s/hooks";
 import {
   WORKLOAD_LABELS,
   isMonitorOperational,
@@ -12,6 +12,7 @@ import {
   aggregateWorkloadResources,
   formatCpu,
   formatMemory,
+  parseMemory,
 } from "@/lib/k8s/workload-utils";
 import { StatusDot } from "@/plugins/helpers";
 
@@ -21,9 +22,11 @@ interface Props {
   namespace?: string;
 }
 
-export function WorkloadsTab({ instance, namespace }: Props) {
+export function WorkloadsTab({ instance, plural, namespace }: Props) {
   const ns = namespace ?? instance.metadata.namespace ?? "";
   const instanceName = instance.metadata.name;
+  const releasePrefix = useReleasePrefix(plural ?? "");
+  const releaseName = `${releasePrefix}${instanceName}`;
 
   const { data: monitorList, isLoading: monitorsLoading } = useWorkloadMonitors(ns);
   const { data: workloadList, isLoading: workloadsLoading } = useWorkloads(ns);
@@ -31,17 +34,22 @@ export function WorkloadsTab({ instance, namespace }: Props) {
   const monitors = useMemo(
     () =>
       (monitorList?.items ?? []).filter(
-        (m) => m.metadata.labels?.[WORKLOAD_LABELS.APP_NAME] === instanceName
+        (m) => m.metadata.name.startsWith(releaseName)
       ),
-    [monitorList, instanceName]
+    [monitorList, releaseName]
+  );
+
+  const monitorNames = useMemo(
+    () => new Set(monitors.map((m) => m.metadata.name)),
+    [monitors]
   );
 
   const workloads = useMemo(
     () =>
       (workloadList?.items ?? []).filter(
-        (w) => w.metadata.labels?.[WORKLOAD_LABELS.APP_NAME] === instanceName
+        (w) => monitorNames.has(w.metadata.labels?.[WORKLOAD_LABELS.MONITOR] ?? "")
       ),
-    [workloadList, instanceName]
+    [workloadList, monitorNames]
   );
 
   const workloadsByMonitor = useMemo(
@@ -221,7 +229,7 @@ function MonitorCard({
                 </div>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground tabular-nums">
                   <span>{w.status?.resources?.cpu ?? "—"}</span>
-                  <span>{w.status?.resources?.memory ?? "—"}</span>
+                  <span>{w.status?.resources?.memory ? formatMemory(parseMemory(w.status.resources.memory)) : "—"}</span>
                 </div>
               </div>
             ))}
