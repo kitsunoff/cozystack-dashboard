@@ -92,11 +92,12 @@ export function InstanceTable({
       }
       const summary = summarizeMonitors(monitors);
       const allOp = summary.operational === summary.total;
+      const healthy = summary.availableReplicas === summary.totalReplicas;
       return (
         <div className="flex items-center gap-1.5">
-          <StatusDot color={allOp ? "bg-emerald-500" : "bg-amber-500"} />
+          <StatusDot color={allOp && healthy ? "bg-emerald-500" : "bg-amber-500"} />
           <span className="text-sm tabular-nums">
-            {summary.operational}/{summary.total}
+            {summary.availableReplicas}/{summary.totalReplicas}
           </span>
         </div>
       );

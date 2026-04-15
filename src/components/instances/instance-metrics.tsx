@@ -4,7 +4,7 @@ import type { AppInstance } from "@/lib/k8s/types";
 
 interface InstanceMetricsProps {
   instances: AppInstance[];
-  workloadSummary?: { operational: number; total: number } | null;
+  workloadSummary?: { availableReplicas: number; totalReplicas: number } | null;
 }
 
 export function InstanceMetrics({ instances, workloadSummary }: InstanceMetricsProps) {
@@ -20,11 +20,11 @@ export function InstanceMetrics({ instances, workloadSummary }: InstanceMetricsP
     ...(notReady > 0
       ? [{ label: "Not Ready", value: String(notReady), color: "text-amber-600" }]
       : []),
-    ...(workloadSummary && workloadSummary.total > 0
+    ...(workloadSummary && workloadSummary.totalReplicas > 0
       ? [{
           label: "Workloads",
-          value: `${workloadSummary.operational}/${workloadSummary.total}`,
-          color: workloadSummary.operational === workloadSummary.total
+          value: `${workloadSummary.availableReplicas}/${workloadSummary.totalReplicas}`,
+          color: workloadSummary.availableReplicas === workloadSummary.totalReplicas
             ? "text-emerald-600"
             : "text-amber-600",
         }]

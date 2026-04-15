@@ -85,9 +85,7 @@ function InstancesContent({ plural }: { plural: string }) {
             ) : (
               <InstanceMetrics
                 instances={instances}
-                workloadSummary={workloadSummary
-                  ? { operational: workloadSummary.operational, total: workloadSummary.total }
-                  : null}
+                workloadSummary={workloadSummary}
               />
             )}
 
