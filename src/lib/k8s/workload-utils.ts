@@ -27,12 +27,21 @@ export interface WorkloadSummary {
   availableReplicas: number;
 }
 
+export function isMonitorOperational(m: WorkloadMonitor): boolean {
+  if (m.status?.operational === true) return true;
+  if (m.status?.operational === false) return false;
+  // When not set by controller, derive from replica health
+  const available = m.status?.availableReplicas ?? 0;
+  const minRequired = m.spec.minReplicas;
+  return available >= minRequired;
+}
+
 export function summarizeMonitors(monitors: WorkloadMonitor[]): WorkloadSummary {
   let operational = 0;
   let totalReplicas = 0;
   let availableReplicas = 0;
   for (const m of monitors) {
-    if (m.status?.operational) operational++;
+    if (isMonitorOperational(m)) operational++;
     totalReplicas += m.status?.observedReplicas ?? 0;
     availableReplicas += m.status?.availableReplicas ?? 0;
   }

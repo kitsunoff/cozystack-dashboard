@@ -3,6 +3,7 @@ import type { WorkloadMonitor, Workload, ObjectMeta } from "./types";
 import {
   WORKLOAD_LABELS,
   groupMonitorsByInstance,
+  isMonitorOperational,
   summarizeMonitors,
   groupWorkloadsByMonitor,
   aggregateWorkloadResources,
@@ -111,6 +112,50 @@ describe("groupMonitorsByInstance", () => {
   });
 });
 
+// --- isMonitorOperational ---
+
+describe("isMonitorOperational", () => {
+  it("returns true when explicitly operational", () => {
+    expect(isMonitorOperational(
+      makeMonitor("a", "inst", { operational: true, available: 1, observed: 1 })
+    )).toBe(true);
+  });
+
+  it("returns false when explicitly not operational", () => {
+    expect(isMonitorOperational(
+      makeMonitor("a", "inst", { operational: false, available: 2, observed: 2 })
+    )).toBe(false);
+  });
+
+  it("derives from replicas when operational is undefined: available >= minReplicas", () => {
+    const m = makeMonitor("a", "inst", { available: 2, observed: 2, replicas: 3 });
+    // minReplicas defaults to 1 in makeMonitor, available=2 >= 1
+    expect(isMonitorOperational(m)).toBe(true);
+  });
+
+  it("derives from replicas when operational is undefined: available < minReplicas", () => {
+    const m: WorkloadMonitor = {
+      apiVersion: "cozystack.io/v1alpha1",
+      kind: "WorkloadMonitor",
+      metadata: makeMeta("x", { [WORKLOAD_LABELS.APP_NAME]: "inst" }),
+      spec: { kind: "x", type: "x", version: "0", replicas: 3, minReplicas: 2, selector: {} },
+      status: { availableReplicas: 1, observedReplicas: 3 },
+    };
+    expect(isMonitorOperational(m)).toBe(false);
+  });
+
+  it("treats minReplicas=0 with available=0 as operational", () => {
+    const m: WorkloadMonitor = {
+      apiVersion: "cozystack.io/v1alpha1",
+      kind: "WorkloadMonitor",
+      metadata: makeMeta("x", { [WORKLOAD_LABELS.APP_NAME]: "inst" }),
+      spec: { kind: "x", type: "x", version: "0", replicas: 0, minReplicas: 0, selector: {} },
+      status: { availableReplicas: 0, observedReplicas: 0 },
+    };
+    expect(isMonitorOperational(m)).toBe(true);
+  });
+});
+
 // --- summarizeMonitors ---
 
 describe("summarizeMonitors", () => {
@@ -141,22 +186,36 @@ describe("summarizeMonitors", () => {
     const monitors = [
       makeMonitor("a", "inst", { operational: true, available: 1, observed: 1 }),
       makeMonitor("b", "inst", { operational: false, available: 0, observed: 2 }),
+      // "c" has no explicit operational, but available(1) >= minReplicas(1) → derived operational
       makeMonitor("c", "inst", { available: 1, observed: 1 }),
     ];
     const result = summarizeMonitors(monitors);
     expect(result.total).toBe(3);
-    expect(result.operational).toBe(1);
+    expect(result.operational).toBe(2);
     expect(result.totalReplicas).toBe(4);
     expect(result.availableReplicas).toBe(2);
   });
 
-  it("handles monitors without status", () => {
+  it("handles monitors without status: minReplicas=0 is derived operational", () => {
     const noStatus: WorkloadMonitor = {
       apiVersion: "cozystack.io/v1alpha1",
       kind: "WorkloadMonitor",
       metadata: makeMeta("x", { [WORKLOAD_LABELS.APP_NAME]: "inst" }),
       spec: { kind: "x", type: "x", version: "0", replicas: 1, minReplicas: 0, selector: {} },
     };
+    // available(0) >= minReplicas(0) → derived operational
+    const result = summarizeMonitors([noStatus]);
+    expect(result).toEqual({ total: 1, operational: 1, totalReplicas: 0, availableReplicas: 0 });
+  });
+
+  it("handles monitors without status: minReplicas > 0 is not operational", () => {
+    const noStatus: WorkloadMonitor = {
+      apiVersion: "cozystack.io/v1alpha1",
+      kind: "WorkloadMonitor",
+      metadata: makeMeta("x", { [WORKLOAD_LABELS.APP_NAME]: "inst" }),
+      spec: { kind: "x", type: "x", version: "0", replicas: 1, minReplicas: 1, selector: {} },
+    };
+    // available(0) < minReplicas(1) → not operational
     const result = summarizeMonitors([noStatus]);
     expect(result).toEqual({ total: 1, operational: 0, totalReplicas: 0, availableReplicas: 0 });
   });

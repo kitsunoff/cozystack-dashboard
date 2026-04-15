@@ -6,6 +6,7 @@ import type { AppInstance, WorkloadMonitor, Workload } from "@/lib/k8s/types";
 import { useWorkloadMonitors, useWorkloads } from "@/lib/k8s/hooks";
 import {
   WORKLOAD_LABELS,
+  isMonitorOperational,
   summarizeMonitors,
   groupWorkloadsByMonitor,
   aggregateWorkloadResources,
@@ -134,7 +135,7 @@ function MonitorCard({
   const available = monitor.status?.availableReplicas ?? 0;
   const observed = monitor.status?.observedReplicas ?? 0;
   const desired = monitor.spec.replicas;
-  const operational = monitor.status?.operational;
+  const operational = isMonitorOperational(monitor);
 
   const resources = aggregateWorkloadResources(workloads);
 
@@ -144,11 +145,9 @@ function MonitorCard({
       <div className="flex items-center justify-between px-5 py-4 bg-muted/30">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            {operational !== undefined && (
-              <StatusDot
-                color={operational ? "bg-emerald-500" : "bg-amber-500"}
-              />
-            )}
+            <StatusDot
+            color={operational ? "bg-emerald-500" : "bg-amber-500"}
+          />
             <span className="text-sm font-medium">
               {monitor.metadata.name}
             </span>
