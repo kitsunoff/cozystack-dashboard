@@ -78,12 +78,19 @@ export function getStatusRenderer(plural: string): StatusRenderer | undefined {
 // --- Default tabs ---
 
 import { OverviewTab } from "@/components/detail/tabs/overview-tab";
+import { SecretsTab } from "@/components/detail/tabs/secrets-tab";
 import { YamlTab } from "@/components/detail/tabs/yaml-tab";
 
 const defaultOverviewTab: TabDef = {
   key: "overview",
   label: "Overview",
   component: OverviewTab as ComponentType<ResourceComponentProps>,
+};
+
+const defaultSecretsTab: TabDef = {
+  key: "secrets",
+  label: "Secrets",
+  component: SecretsTab,
 };
 
 const defaultYamlTab: TabDef = {
@@ -94,5 +101,5 @@ const defaultYamlTab: TabDef = {
 
 /** Get tabs for a resource — registered or defaults */
 export function resolveDetailTabs(plural: string): TabDef[] {
-  return getDetailTabs(plural) ?? [defaultOverviewTab, defaultYamlTab];
+  return getDetailTabs(plural) ?? [defaultOverviewTab, defaultSecretsTab, defaultYamlTab];
 }

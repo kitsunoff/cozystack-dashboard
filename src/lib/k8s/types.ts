@@ -257,6 +257,15 @@ export interface MachineDeployment {
   };
 }
 
+// Core Kubernetes Secret
+export interface K8sSecret {
+  apiVersion: string;
+  kind: "Secret";
+  metadata: ObjectMeta;
+  type?: string;
+  data?: Record<string, string>;
+}
+
 // Generic app instance (apps.cozystack.io/v1alpha1)
 
 export interface AppInstance {

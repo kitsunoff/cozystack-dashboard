@@ -55,6 +55,9 @@ export const endpoints = {
   namespaces: () => "/api/v1/namespaces",
   events: (namespace: string) => `/api/v1/namespaces/${namespace}/events`,
 
+  // Secrets
+  secrets: (namespace: string) => `/api/v1/namespaces/${namespace}/secrets`,
+
   // Storage
   storageClasses: () => "/apis/storage.k8s.io/v1/storageclasses",
 
