@@ -1,6 +1,6 @@
 "use client";
 
-import { use, Suspense, useMemo } from "react";
+import { use, Suspense, useMemo, useRef } from "react";
 import {
   useMarketplacePanels,
   useInstances,
@@ -35,10 +35,14 @@ function InstancesContent({ plural }: { plural: string }) {
   const instances = instanceList?.items ?? [];
   const isLoading = panelsLoading || instancesLoading;
 
-  const instanceNames = useMemo(
-    () => instances.map((i) => i.metadata.name),
-    [instances]
-  );
+  // Accumulate instance names so events for deleted instances remain visible
+  const seenNamesRef = useRef(new Set<string>());
+  const instanceNames = useMemo(() => {
+    for (const i of instances) {
+      seenNamesRef.current.add(i.metadata.name);
+    }
+    return Array.from(seenNamesRef.current);
+  }, [instances]);
 
   const releasePrefix = appDef?.spec.release?.prefix ?? "";
   const { data: events } = useEvents(namespace, instanceNames, releasePrefix);
