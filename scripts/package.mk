@@ -1,31 +1,35 @@
-REGISTRY ?= ghcr.io/kitsunoff
-TAG      ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+.DEFAULT_GOAL=help
+.PHONY=help show diff apply delete update image
 
-.PHONY: help show apply diff delete image image-push
+help: ## Show this help.
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {sub("\\\\n",sprintf("\n%22c"," "), $$2);printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-help:
-	@echo "Targets:"
-	@echo "  show        Render Helm templates"
-	@echo "  apply       Deploy to cluster"
-	@echo "  diff        Show diff against cluster"
-	@echo "  delete      Remove from cluster"
-	@echo "  image       Build container image"
-	@echo "  image-push  Build and push image"
+show: check ## Show output of rendered templates
+	cozyhr show -n $(NAMESPACE) $(NAME)
 
-show:
-	helm template $(NAME) . --namespace $(NAMESPACE) --set image.tag=$(TAG)
+apply: check suspend ## Apply Helm release to a Kubernetes cluster
+	cozyhr apply -n $(NAMESPACE) $(NAME)
 
-apply:
-	helm upgrade --install $(NAME) . --namespace $(NAMESPACE) --create-namespace --set image.tag=$(TAG)
+diff: check ## Diff Helm release against objects in a Kubernetes cluster
+	cozyhr diff -n $(NAMESPACE) $(NAME)
 
-diff:
-	helm diff upgrade $(NAME) . --namespace $(NAMESPACE) --set image.tag=$(TAG)
+suspend: check ## Suspend reconciliation for an existing Helm release
+	cozyhr suspend -n $(NAMESPACE) $(NAME)
 
-delete:
-	helm uninstall $(NAME) --namespace $(NAMESPACE)
+resume: check ## Resume reconciliation for an existing Helm release
+	cozyhr resume -n $(NAMESPACE) $(NAME)
 
-image:
-	podman build --tag $(REGISTRY)/cozystack-dashboard:$(TAG) --file ../../../Containerfile ../../..
+delete: check suspend ## Delete Helm release from a Kubernetes cluster
+	cozyhr delete -n $(NAMESPACE) $(NAME)
 
-image-push: image
-	podman push $(REGISTRY)/cozystack-dashboard:$(TAG)
+check:
+	@if [ -z "$(NAME)" ]; then echo "env NAME is not set!" >&2; exit 1; fi
+	@if [ -z "$(NAMESPACE)" ]; then echo "env NAMESPACE is not set!" >&2; exit 1; fi
+
+clean:
+	rm -rf charts/
+
+%-update:
+	helm repo add $(REPO_NAME) $(REPO_URL)
+	helm repo update $(REPO_NAME)
+	helm pull $(REPO_NAME)/$(CHART_NAME) --untar --untardir charts --version "$(CHART_VERSION)"
