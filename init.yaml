@@ -1,0 +1,32 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: cozystack-dashboard
+  namespace: cozy-system
+spec:
+  interval: 5m
+  url: https://github.com/kitsunoff/cozystack-dashboard
+  ref:
+    branch: main
+---
+apiVersion: cozystack.io/v1alpha1
+kind: PackageSource
+metadata:
+  name: kitsunoff.cozystack-dashboard
+spec:
+  sourceRef:
+    kind: GitRepository
+    name: cozystack-dashboard
+    namespace: cozy-system
+  variants:
+    - name: default
+      components:
+        - name: dashboard
+          path: packages/system/dashboard
+          install:
+            releaseName: cozy-dashboard
+            namespace: cozy-dashboard
+            privileged: true
+          valuesFiles:
+            - values.yaml
