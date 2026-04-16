@@ -36,7 +36,7 @@ spec:
             - --provider=oidc
             - --upstream=http://cozy-dashboard-web.{{ .Release.Namespace }}.svc:3000
             - --http-address=0.0.0.0:8000
-            - --redirect-url=https://dashboard.{{ $host }}/oauth2/callback
+            - --redirect-url=https://dashboard-new.{{ $host }}/oauth2/callback
             - --oidc-issuer-url=https://keycloak.{{ $host }}/realms/cozy
             {{- if $keycloakInternalUrl }}
             - --skip-oidc-discovery
