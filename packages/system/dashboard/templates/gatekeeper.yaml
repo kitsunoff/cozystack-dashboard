@@ -1,0 +1,129 @@
+{{- $host := index .Values._cluster "root-host" }}
+{{- $oidcEnabled := index .Values._cluster "oidc-enabled" | toString }}
+{{- $oidcInsecureSkipVerify := index .Values._cluster "oidc-insecure-skip-verify" | toString }}
+{{- $keycloakInternalUrl := index .Values._cluster "keycloak-internal-url" | default "" }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cozy-dashboard-gatekeeper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cozy-dashboard
+      app.kubernetes.io/name: gatekeeper
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: cozy-dashboard
+        app.kubernetes.io/name: gatekeeper
+    spec:
+      serviceAccountName: cozy-dashboard-gatekeeper
+      enableServiceLinks: false
+      priorityClassName: system-cluster-critical
+      containers:
+        {{- if eq $oidcEnabled "true" }}
+        - name: auth-proxy
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.12.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --provider=oidc
+            - --upstream=http://cozy-dashboard-web.{{ .Release.Namespace }}.svc:3000
+            - --http-address=0.0.0.0:8000
+            - --redirect-url=https://dashboard.{{ $host }}/oauth2/callback
+            - --oidc-issuer-url=https://keycloak.{{ $host }}/realms/cozy
+            {{- if $keycloakInternalUrl }}
+            - --skip-oidc-discovery
+            - --login-url=https://keycloak.{{ $host }}/realms/cozy/protocol/openid-connect/auth
+            - --redeem-url={{ $keycloakInternalUrl }}/protocol/openid-connect/token
+            - --oidc-jwks-url={{ $keycloakInternalUrl }}/protocol/openid-connect/certs
+            - --validate-url={{ $keycloakInternalUrl }}/protocol/openid-connect/userinfo
+            - --backend-logout-url={{ $keycloakInternalUrl }}/protocol/openid-connect/logout?id_token_hint={id_token}
+            {{- else }}
+            - --backend-logout-url=https://keycloak.{{ $host }}/realms/cozy/protocol/openid-connect/logout?id_token_hint={id_token}
+            {{- end }}
+            - --whitelist-domain=keycloak.{{ $host }}
+            - --email-domain=*
+            - --pass-access-token=true
+            - --pass-authorization-header=true
+            - --cookie-refresh=3m
+            - --cookie-name=kc-access
+            - --cookie-secure=true
+            - --cookie-secret=$(OAUTH2_PROXY_COOKIE_SECRET)
+            - --skip-provider-button
+            - --scope=openid email profile offline_access
+            {{- if eq $oidcInsecureSkipVerify "true" }}
+            - --ssl-insecure-skip-verify=true
+            {{- end }}
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              value: dashboard
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-client
+                  key: client-secret-key
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-auth-config
+                  key: cookieSecret
+        {{- else }}
+        - name: token-proxy
+          image: {{ .Values.tokenProxy.image }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - --upstream=http://cozy-dashboard-web.{{ .Release.Namespace }}.svc:3000
+            - --http-address=0.0.0.0:8000
+            - --cookie-refresh=1h
+            - --cookie-name=kc-access
+            - --cookie-secure=true
+            - --cookie-secret=$(TOKEN_PROXY_COOKIE_SECRET)
+          env:
+            - name: TOKEN_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-auth-config
+                  key: cookieSecret
+        {{- end }}
+          ports:
+            - name: proxy
+              containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: proxy
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: proxy
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              ephemeral-storage: 50Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
