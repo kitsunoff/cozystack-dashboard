@@ -1,0 +1,70 @@
+{{- $host := index .Values._cluster "root-host" }}
+
+{{- $existingDashboardSecret := lookup "v1" "Secret" .Release.Namespace "dashboard-client" }}
+
+{{ $dashboardClient := "" }}
+{{- if $existingDashboardSecret }}
+  {{- $dashboardClient = index $existingDashboardSecret.data "client-secret-key" | b64dec }}
+{{- else }}
+  {{- $dashboardClient = randAlphaNum 32 }}
+{{- end }}
+
+{{- $existingAuthConfig := lookup "v1" "Secret" .Release.Namespace "dashboard-auth-config" }}
+{{ $cookieSecret := "" }}
+{{- if $existingAuthConfig }}
+  {{- $cookieSecret = index $existingAuthConfig.data "cookieSecret" | b64dec }}
+{{- else }}
+  {{- $cookieSecret = randAlphaNum 16 }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dashboard-client
+type: Opaque
+data:
+  client-secret-key: {{ $dashboardClient | b64enc }}
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dashboard-auth-config
+type: Opaque
+data:
+  cookieSecret: {{ $cookieSecret | b64enc }}
+
+---
+{{- if .Capabilities.APIVersions.Has "v1.edp.epam.com/v1" }}
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: dashboard-client
+  annotations:
+    secret-hash: {{ $dashboardClient | sha256sum }}
+spec:
+  serviceAccount:
+    enabled: true
+  realmRef:
+    name: keycloakrealm-cozy
+    kind: ClusterKeycloakRealm
+  secret: $dashboard-client:client-secret-key
+  advancedProtocolMappers: true
+  name: dashboard
+  clientId: dashboard
+  directAccess: true
+  public: false
+  webUrl: "https://dashboard-new.{{ $host }}"
+  defaultClientScopes:
+    - groups
+    - kubernetes-client
+  optionalClientScopes:
+    - offline_access
+  attributes:
+    post.logout.redirect.uris: "+"
+    client.session.idle.timeout: "86400"
+    client.session.max.lifespan: "604800"
+  redirectUris:
+    - "https://dashboard-new.{{ $host }}/oauth2/callback/*"
+{{- end }}

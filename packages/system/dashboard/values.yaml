@@ -1,0 +1,4 @@
+dashboard:
+  image: ghcr.io/kitsunoff/cozystack-dashboard:main
+tokenProxy:
+  image: ghcr.io/cozystack/cozystack/token-proxy:v1.3.0-rc.1@sha256:2e280991e07853ea48f97b0a42946afffa10d03d6a83d41099ed83e6ffc94fdc

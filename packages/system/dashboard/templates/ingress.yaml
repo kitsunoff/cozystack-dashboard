@@ -1,0 +1,36 @@
+{{- $solver := (index .Values._cluster "solver") | default "http01" }}
+{{- $clusterIssuer := (index .Values._cluster "issuer-name") | default "letsencrypt-prod" }}
+{{- $host := index .Values._cluster "root-host" }}
+{{- $exposeServices := splitList "," ((index .Values._cluster "expose-services") | default "") }}
+{{- $exposeIngress := (index .Values._cluster "expose-ingress") | default "tenant-root" }}
+
+{{- if has "dashboard" $exposeServices }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $clusterIssuer }}
+    {{- if eq $solver "http01" }}
+    acme.cert-manager.io/http01-ingress-class: {{ $exposeIngress }}
+    {{- end }}
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
+  name: cozy-dashboard-ingress
+spec:
+  ingressClassName: {{ $exposeIngress }}
+  rules:
+    - host: dashboard-new.{{ $host }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: cozy-dashboard-gatekeeper
+                port:
+                  number: 8000
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - dashboard-new.{{ $host }}
+      secretName: cozy-dashboard-tls
+{{- end }}

@@ -1,0 +1,6 @@
+apiVersion: cozystack.io/v1alpha1
+kind: Package
+metadata:
+  name: kitsunoff.cozystack-dashboard
+spec:
+  variant: default

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cozy-dashboard-gatekeeper
+{{- $oidcEnabled := index .Values._cluster "oidc-enabled" | toString }}
+{{- if ne $oidcEnabled "true" }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cozy-dashboard-gatekeeper-jwks
+rules:
+- nonResourceURLs:
+  - /openid/v1/jwks
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cozy-dashboard-gatekeeper-jwks
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cozy-dashboard-gatekeeper-jwks
+subjects:
+- kind: ServiceAccount
+  name: cozy-dashboard-gatekeeper
+  namespace: {{ .Release.Namespace }}
+{{- end }}
