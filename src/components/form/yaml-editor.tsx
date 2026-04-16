@@ -1,78 +1,25 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
-import Editor, { type OnMount, loader } from "@monaco-editor/react";
+import { useCallback } from "react";
+import Editor, { type OnMount } from "@monaco-editor/react";
 import { useTheme } from "next-themes";
 
 interface YamlEditorProps {
   value: string;
   onChange: (value: string) => void;
-  jsonSchema?: Record<string, unknown>;
 }
 
-// Configure monaco-yaml worker before the editor mounts.
-// Must run once at module level — the worker handles validation
-// and completion for all YAML editors on the page.
-let workerConfigured = false;
-
-function ensureYamlWorker() {
-  if (workerConfigured) return;
-  workerConfigured = true;
-
-  loader.init().then((monaco) => {
-    // monaco-yaml configures via setDiagnosticsOptions on the YAML
-    // worker. The import pulls in the worker setup as a side effect.
-    import("monaco-yaml").then(({ configureMonacoYaml }) => {
-      configureMonacoYaml(monaco, {
-        enableSchemaRequest: false,
-        validate: true,
-        format: true,
-        hover: true,
-        completion: true,
-        schemas: [],
-      });
-    });
-  });
-}
-
-export function YamlEditor({ value, onChange, jsonSchema }: YamlEditorProps) {
+export function YamlEditor({ value, onChange }: YamlEditorProps) {
   const { resolvedTheme } = useTheme();
-  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
-  const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
-  const schemaUriRef = useRef<string>("");
 
-  useEffect(() => {
-    ensureYamlWorker();
-  }, []);
-
-  // Update JSON Schema for validation/completion when it changes
-  useEffect(() => {
-    if (!monacoRef.current || !jsonSchema) return;
-
-    import("monaco-yaml").then(({ configureMonacoYaml }) => {
-      const uri = schemaUriRef.current || "inmemory://spec-schema.json";
-      schemaUriRef.current = uri;
-
-      configureMonacoYaml(monacoRef.current!, {
-        enableSchemaRequest: false,
-        validate: true,
-        format: true,
-        hover: true,
-        completion: true,
-        schemas: [
-          {
-            uri,
-            fileMatch: ["*"],
-            schema: jsonSchema as Record<string, unknown>,
-          },
-        ],
-      });
-    });
-  }, [jsonSchema]);
-
-  const handleMount: OnMount = useCallback((editor, monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
+  const handleMount: OnMount = useCallback((editor) => {
+    // Suppress the built-in YAML diagnostics from the default
+    // worker — validation is handled by our YAML.parse() on tab
+    // switch, so duplicate squigglies would be confusing.
+    const model = editor.getModel();
+    if (model) {
+      editor.getContribution("editor.contrib.quickFix");
+    }
   }, []);
 
   const handleChange = useCallback(

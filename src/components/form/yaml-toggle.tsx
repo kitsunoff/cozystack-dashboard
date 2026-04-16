@@ -8,11 +8,9 @@ import { YamlEditor } from "./yaml-editor";
 
 interface FormYamlToggleProps {
   children: React.ReactNode;
-  /** JSON Schema for YAML validation/completion (optional) */
-  jsonSchema?: Record<string, unknown>;
 }
 
-export function FormYamlToggle({ children, jsonSchema }: FormYamlToggleProps) {
+export function FormYamlToggle({ children }: FormYamlToggleProps) {
   const { values, setAllValues } = useFormContext();
   const [mode, setMode] = useState<"form" | "yaml">("form");
   const [yamlText, setYamlText] = useState("");
@@ -73,11 +71,7 @@ export function FormYamlToggle({ children, jsonSchema }: FormYamlToggleProps) {
 
       <TabsContent value="yaml">
         <div className="space-y-3">
-          <YamlEditor
-            value={yamlText}
-            onChange={handleYamlChange}
-            jsonSchema={jsonSchema}
-          />
+          <YamlEditor value={yamlText} onChange={handleYamlChange} />
           {parseError && (
             <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
               {parseError}

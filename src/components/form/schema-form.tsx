@@ -70,7 +70,6 @@ export function SchemaForm({
     <FormProvider initialValues={initialValues} namespace={namespace}>
       <FormContent
         rootNode={rootNode}
-        openAPISchema={openAPISchema}
         plural={plural}
         namespace={namespace}
         apiGroup={apiGroup}
@@ -85,7 +84,6 @@ export function SchemaForm({
 
 function FormContent({
   rootNode,
-  openAPISchema,
   plural,
   namespace,
   apiGroup,
@@ -95,7 +93,6 @@ function FormContent({
   editName,
 }: {
   rootNode: SchemaNode;
-  openAPISchema: Record<string, unknown>;
   plural: string;
   namespace: string;
   apiGroup: string;
@@ -170,7 +167,7 @@ function FormContent({
         />
       </div>
 
-      <FormYamlToggle jsonSchema={openAPISchema}>
+      <FormYamlToggle>
         {visibleFields.length > 0 && (
           <>
             <Separator />
