@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { FormProvider, useFormContext } from "./form-context";
+import { FormYamlToggle } from "./yaml-toggle";
 import { FieldRenderer } from "./field-renderer";
 import { walkSchema, collectVisibleFields } from "@/lib/schema/walker";
 import { applyOverrides } from "@/lib/schema/cfo-merger";
@@ -166,14 +167,16 @@ function FormContent({
         />
       </div>
 
-      {visibleFields.length > 0 && (
-        <>
-          <Separator />
-          {visibleFields.map((field) => (
-            <FieldRenderer key={field.path.join(".")} node={field} />
-          ))}
-        </>
-      )}
+      <FormYamlToggle>
+        {visibleFields.length > 0 && (
+          <>
+            <Separator />
+            {visibleFields.map((field) => (
+              <FieldRenderer key={field.path.join(".")} node={field} />
+            ))}
+          </>
+        )}
+      </FormYamlToggle>
 
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">

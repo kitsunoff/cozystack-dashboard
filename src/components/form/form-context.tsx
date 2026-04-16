@@ -6,6 +6,7 @@ interface FormContextValue {
   values: Record<string, unknown>;
   getValue: (path: string[]) => unknown;
   setValue: (path: string[], value: unknown) => void;
+  setAllValues: (values: Record<string, unknown>) => void;
   namespace: string;
 }
 
@@ -58,8 +59,13 @@ export function FormProvider({
     });
   }, []);
 
+  const setAllValues = useCallback(
+    (newValues: Record<string, unknown>) => setValues(newValues),
+    []
+  );
+
   return (
-    <FormContext value={{ values, getValue, setValue, namespace }}>
+    <FormContext value={{ values, getValue, setValue, setAllValues, namespace }}>
       {children}
     </FormContext>
   );

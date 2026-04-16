@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FormProvider, useFormContext } from "@/components/form/form-context";
+import { FormYamlToggle } from "@/components/form/yaml-toggle";
 import { k8sCreate, k8sPatch } from "@/lib/k8s/client";
 import { endpoints } from "@/lib/k8s/endpoints";
 import { deepMerge } from "@/lib/utils";
@@ -133,7 +134,9 @@ function WizardShellInner({
         />
       </div>
 
-      {children}
+      <FormYamlToggle>
+        {children}
+      </FormYamlToggle>
 
       {error && (
         <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
