@@ -1,6 +1,6 @@
 "use client";
 
-import { use, Suspense, useMemo } from "react";
+import { use, Suspense, useMemo, useRef } from "react";
 import {
   useMarketplacePanels,
   useInstances,
@@ -37,8 +37,13 @@ function InstancesContent({ plural }: { plural: string }) {
   const instances = instanceList?.items ?? [];
   const isLoading = panelsLoading || instancesLoading;
 
+  // Accumulate instance names so events for deleted instances remain visible
+  const seenNamesRef = useRef(new Set<string>());
+  for (const i of instances) {
+    seenNamesRef.current.add(i.metadata.name);
+  }
   const instanceNames = useMemo(
-    () => instances.map((i) => i.metadata.name),
+    () => Array.from(seenNamesRef.current),
     [instances]
   );
 
