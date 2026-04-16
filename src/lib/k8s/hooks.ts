@@ -19,6 +19,7 @@ import type {
   K8sSecret,
   WorkloadMonitor,
   Workload,
+  Pod,
 } from "./types";
 
 export function useMarketplacePanels() {
@@ -566,4 +567,27 @@ export function useWorkloads(namespace: string) {
   );
 
   return query;
+}
+
+// --- Pods ---
+
+/**
+ * Fetch pods belonging to an instance by matching workload monitor names.
+ * Uses the same release prefix logic as WorkloadsTab.
+ */
+export function useInstancePods(
+  namespace: string,
+  plural: string,
+  instanceName: string
+) {
+  const releasePrefix = useReleasePrefix(plural);
+  const releaseName = `${releasePrefix}${instanceName}`;
+
+  return useQuery({
+    queryKey: ["instancePods", namespace, releaseName],
+    queryFn: () => k8sList<Pod>(endpoints.pods(namespace)),
+    enabled: !!namespace && !!instanceName,
+    select: (data) =>
+      data.items.filter((p) => p.metadata.name.startsWith(releaseName)),
+  });
 }

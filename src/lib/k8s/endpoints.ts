@@ -70,4 +70,9 @@ export const endpoints = {
     `${COZYSTACK_BASE}/namespaces/${namespace}/workloadmonitors`,
   workloads: (namespace: string) =>
     `${COZYSTACK_BASE}/namespaces/${namespace}/workloads`,
+
+  // Core: Pods
+  pods: (namespace: string) => `/api/v1/namespaces/${namespace}/pods`,
+  pod: (namespace: string, name: string) =>
+    `/api/v1/namespaces/${namespace}/pods/${name}`,
 } as const;

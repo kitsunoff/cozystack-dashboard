@@ -319,3 +319,26 @@ export interface Workload {
   metadata: ObjectMeta;
   status?: WorkloadStatus;
 }
+
+// Pod (core/v1) — minimal subset for log streaming
+
+export interface ContainerInfo {
+  name: string;
+}
+
+export interface PodSpec {
+  containers: ContainerInfo[];
+  initContainers?: ContainerInfo[];
+}
+
+export interface PodStatus {
+  phase: string;
+}
+
+export interface Pod {
+  apiVersion: string;
+  kind: "Pod";
+  metadata: ObjectMeta;
+  spec: PodSpec;
+  status?: PodStatus;
+}
