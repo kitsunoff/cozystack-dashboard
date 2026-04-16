@@ -51,6 +51,7 @@ export function WizardShell({
   return (
     <FormProvider initialValues={initialValues} namespace={namespace}>
       <WizardShellInner
+        schema={schema}
         plural={plural}
         namespace={namespace}
         apiGroup={apiGroup}
@@ -68,6 +69,7 @@ export function WizardShell({
 }
 
 function WizardShellInner({
+  schema,
   plural,
   namespace,
   apiGroup,
@@ -78,7 +80,7 @@ function WizardShellInner({
   editName,
   onSubmit: customSubmit,
   children,
-}: Omit<WizardShellProps, "schema" | "existingValues">) {
+}: Omit<WizardShellProps, "existingValues">) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { values } = useFormContext();
@@ -134,7 +136,7 @@ function WizardShellInner({
         />
       </div>
 
-      <FormYamlToggle>
+      <FormYamlToggle jsonSchema={schema}>
         {children}
       </FormYamlToggle>
 

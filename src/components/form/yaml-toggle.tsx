@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import YAML from "yaml";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { useFormContext } from "./form-context";
+import { YamlEditor } from "./yaml-editor";
 
 interface FormYamlToggleProps {
   children: React.ReactNode;
+  /** JSON Schema for YAML validation/completion (optional) */
+  jsonSchema?: Record<string, unknown>;
 }
 
-export function FormYamlToggle({ children }: FormYamlToggleProps) {
+export function FormYamlToggle({ children, jsonSchema }: FormYamlToggleProps) {
   const { values, setAllValues } = useFormContext();
   const [mode, setMode] = useState<"form" | "yaml">("form");
   const [yamlText, setYamlText] = useState("");
@@ -27,28 +29,28 @@ export function FormYamlToggle({ children }: FormYamlToggleProps) {
     }
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync YAML → form values when switching back to form tab
-  const applyYamlToForm = () => {
-    if (yamlText === lastSyncedRef.current) return;
+  const applyYamlToForm = useCallback(() => {
+    if (yamlText === lastSyncedRef.current) return true;
 
     try {
       const parsed = YAML.parse(yamlText);
       if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) {
         setParseError("YAML must be a mapping (key: value), not a scalar or list");
-        return;
+        return false;
       }
       setAllValues(parsed as Record<string, unknown>);
       setParseError(null);
+      return true;
     } catch (err) {
       setParseError(err instanceof Error ? err.message : "Invalid YAML");
+      return false;
     }
-  };
+  }, [yamlText, setAllValues]);
 
   const handleTabChange = (tab: string | null) => {
     if (!tab) return;
     if (tab === "form" && mode === "yaml") {
-      applyYamlToForm();
-      if (parseError) return; // stay on YAML if parse failed
+      if (!applyYamlToForm()) return;
     }
     setMode(tab as "form" | "yaml");
   };
@@ -71,11 +73,10 @@ export function FormYamlToggle({ children }: FormYamlToggleProps) {
 
       <TabsContent value="yaml">
         <div className="space-y-3">
-          <Textarea
+          <YamlEditor
             value={yamlText}
-            onChange={(e) => handleYamlChange(e.target.value)}
-            className="font-mono text-xs leading-relaxed min-h-[400px]"
-            spellCheck={false}
+            onChange={handleYamlChange}
+            jsonSchema={jsonSchema}
           />
           {parseError && (
             <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
