@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import YAML from "yaml";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useFormContext } from "./form-context";
 import { YamlEditor } from "./yaml-editor";
+import { cn } from "@/lib/utils";
 
 interface FormYamlToggleProps {
   children: React.ReactNode;
@@ -17,7 +17,6 @@ export function FormYamlToggle({ children }: FormYamlToggleProps) {
   const [parseError, setParseError] = useState<string | null>(null);
   const lastSyncedRef = useRef<string>("");
 
-  // Sync form values → YAML when switching to YAML tab
   useEffect(() => {
     if (mode === "yaml") {
       const text = YAML.stringify(values, { indent: 2, lineWidth: 0 });
@@ -45,33 +44,53 @@ export function FormYamlToggle({ children }: FormYamlToggleProps) {
     }
   }, [yamlText, setAllValues]);
 
-  const handleTabChange = (tab: string | null) => {
-    if (!tab) return;
+  const switchTo = (tab: "form" | "yaml") => {
+    if (tab === mode) return;
     if (tab === "form" && mode === "yaml") {
       if (!applyYamlToForm()) return;
     }
-    setMode(tab as "form" | "yaml");
-  };
-
-  const handleYamlChange = (text: string) => {
-    setYamlText(text);
-    setParseError(null);
+    setMode(tab);
   };
 
   return (
-    <Tabs value={mode} onValueChange={handleTabChange}>
-      <TabsList variant="default" className="mb-4">
-        <TabsTrigger value="form">Form</TabsTrigger>
-        <TabsTrigger value="yaml">YAML</TabsTrigger>
-      </TabsList>
+    <div className="space-y-4">
+      {/* Tab buttons */}
+      <div className="inline-flex items-center rounded-lg bg-muted p-[3px] text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => switchTo("form")}
+          className={cn(
+            "inline-flex items-center justify-center rounded-md px-3 py-1 text-sm font-medium transition-colors",
+            mode === "form"
+              ? "bg-background text-foreground shadow-sm"
+              : "hover:text-foreground"
+          )}
+        >
+          Form
+        </button>
+        <button
+          type="button"
+          onClick={() => switchTo("yaml")}
+          className={cn(
+            "inline-flex items-center justify-center rounded-md px-3 py-1 text-sm font-medium transition-colors",
+            mode === "yaml"
+              ? "bg-background text-foreground shadow-sm"
+              : "hover:text-foreground"
+          )}
+        >
+          YAML
+        </button>
+      </div>
 
-      <TabsContent value="form">
+      {/* Form content — always mounted, hidden when in YAML mode */}
+      <div className={mode !== "form" ? "hidden" : undefined}>
         {children}
-      </TabsContent>
+      </div>
 
-      <TabsContent value="yaml">
+      {/* YAML editor — only visible in YAML mode */}
+      {mode === "yaml" && (
         <div className="space-y-3">
-          <YamlEditor value={yamlText} onChange={handleYamlChange} />
+          <YamlEditor value={yamlText} onChange={(text) => { setYamlText(text); setParseError(null); }} />
           {parseError && (
             <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
               {parseError}
@@ -81,7 +100,7 @@ export function FormYamlToggle({ children }: FormYamlToggleProps) {
             Edit the spec as YAML. Switching back to Form applies changes automatically.
           </p>
         </div>
-      </TabsContent>
-    </Tabs>
+      )}
+    </div>
   );
 }
