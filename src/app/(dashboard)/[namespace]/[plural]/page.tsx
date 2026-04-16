@@ -37,12 +37,13 @@ function InstancesContent({ plural }: { plural: string }) {
 
   // Accumulate instance names so events for deleted instances remain visible
   const seenNamesRef = useRef(new Set<string>());
-  const instanceNames = useMemo(() => {
-    for (const i of instances) {
-      seenNamesRef.current.add(i.metadata.name);
-    }
-    return Array.from(seenNamesRef.current);
-  }, [instances]);
+  for (const i of instances) {
+    seenNamesRef.current.add(i.metadata.name);
+  }
+  const instanceNames = useMemo(
+    () => Array.from(seenNamesRef.current),
+    [instances]
+  );
 
   const releasePrefix = appDef?.spec.release?.prefix ?? "";
   const { data: events } = useEvents(namespace, instanceNames, releasePrefix);
