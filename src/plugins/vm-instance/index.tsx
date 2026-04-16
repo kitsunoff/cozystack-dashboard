@@ -12,6 +12,7 @@ import { registerCustomForm } from "@/components/form/registry";
 import { OverviewTab } from "@/components/detail/tabs/overview-tab";
 import { SecretsTab } from "@/components/detail/tabs/secrets-tab";
 import { WorkloadsTab } from "@/components/detail/tabs/workloads-tab";
+import { LogsTab } from "@/components/detail/tabs/logs-tab";
 import { YamlTab } from "@/components/detail/tabs/yaml-tab";
 import { VmConsoleTab } from "./tabs/console-tab";
 
@@ -42,6 +43,7 @@ registerDetailTabs("vminstances", [
   { key: "overview", label: "Overview", component: asTab(OverviewTab) },
   { key: "console", label: "Console", component: asTab(VmConsoleTab) },
   { key: "workloads", label: "Workloads", component: asTab(WorkloadsTab) },
+  { key: "logs", label: "Logs", component: asTab(LogsTab) },
   { key: "secrets", label: "Secrets", component: SecretsTab },
   { key: "yaml", label: "YAML", component: asTab(YamlTab) },
 ]);
